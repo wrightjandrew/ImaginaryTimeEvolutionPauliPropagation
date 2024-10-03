@@ -8,10 +8,8 @@ mutable struct NumericPathProperties <: PathProperties
     freq::Int
 end
 
+NumericPathProperties(coeff) = NumericPathProperties(coeff, 0, 0, 0)
 
-function PathProperties(coeff::Number)
-    return NumericPathProperties(coeff, 0, 0, 0)
-end
 
 
 import Base: *
@@ -19,21 +17,13 @@ function *(pth::PathProperties, val::Number)
     pth.coeff *= val
     return pth
 end
+import Base: copy
+function copy(path_properties::PathProperties)
+    return typeof(path_properties)(path_properties.coeff, path_properties.nsins, path_properties.ncos, path_properties.freq)
+end
 
 Base.show(io::IO, pth::PathProperties) = print(io, "PathProperties($(typeof(pth.coeff)), nsins=$(pth.nsins), ncos=$(pth.ncos), freq=$(pth.freq))")
 
-# TODO: This is for the Surrogate
-# mutable struct NodePathProperties <: PathProperties
-#     coeff::CircuitNode
-#     nsins::Int
-#     ncos::Int
-#     freq::Int
-# end
-
-# function PathProperties(node::CircuitNode)
-#     return NodePathProperties(node, 0, 0, 0)
-# end
-
-# function Base.copy(pth::NodePathProperties)
-#     return NodePathProperties(pth.coeff, pth.nsins, pth.ncos, pth.freq)
-# end
+function getnumcoeff(val::NumericPathProperties)
+    return val.coeff
+end

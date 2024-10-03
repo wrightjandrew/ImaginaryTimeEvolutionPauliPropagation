@@ -1,6 +1,10 @@
 module PauliPropagation
 
+using Base.Threads
+
 include("datatypes.jl")
+export PathProperties, NumericPathProperties
+
 
 include("gates.jl")
 export
@@ -40,6 +44,9 @@ include("Propagation/Propagation.jl")
 export mergingbfs
 
 include("stateoverlap.jl")
-export evalagainstzero, evalagainsinitial
+export evalagainstzero, evalagainsinitial, zerofilter
+
+include("surrogate.jl")
+export operatortopathdict, PauliGateNode, gettraceevalorder, expectation, resetnodes
 
 end

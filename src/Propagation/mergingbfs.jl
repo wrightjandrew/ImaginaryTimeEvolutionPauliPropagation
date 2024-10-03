@@ -1,13 +1,13 @@
 
 function mergingbfs(circ, op::Union{Vector{Symbol},Integer}, thetas; kwargs...)
-    # if typeof(thetas) <: AbstractArray{Num}
-    #     val = PathProperties(1.0)
-    #     etype = PathProperties
-    # else
     val = 1.0
     etype = eltype(thetas)
-    # end
     d = Dict{typeof(op),etype}(deepcopy(op) => val)
+    return mergingbfs(circ, d, thetas; kwargs...)
+end
+
+function mergingbfs(circ, op, path_properties::PathProperties, thetas; kwargs...)
+    d = Dict{typeof(op),typeof(path_properties)}(deepcopy(op) => path_properties)
     return mergingbfs(circ, d, thetas; kwargs...)
 end
 
@@ -24,6 +24,54 @@ function mergingbfs(circ, d, thetas; kwargs...)
         d, second_d, param_ind = apply(gate, d, second_d, thetas, param_ind; kwargs...)
     end
     return d
+end
+
+
+function applystep!(gate::PauliGateUnion, oper, theta, param_idx, old_coeff, operator_dict, new_operator_dict, args...; max_freq::Real=Inf, max_weight::Real=Inf, min_abs_coeff=0.0, max_sins::Real=Inf, kwargs...)
+
+
+    if commutes(gate, oper)
+        # old_coeff = applyidentity(old_coeff)
+        return operator_dict, new_operator_dict
+    end
+
+    # TODO: remove low level details from this level
+    if !frequencytruncation(old_coeff, max_freq - 1)  # want to stop before splitting
+        delete!(operator_dict, oper)
+        return operator_dict, new_operator_dict
+    end
+
+
+    coeff1 = applycos(old_coeff, theta; param_idx=param_idx)
+
+    # TODO: new design is to delete small values after merging. Generally make this function less complicated.
+    operator_dict = _updateorremove!(oper, coeff1, operator_dict; min_abs_coeff=min_abs_coeff)
+
+    if !maxsintruncation(old_coeff, max_sins - 1)  # -1 because we want to stop the split before it happens. TODO: adapt after pulling out truncations to top level.
+        sign, new_oper = getnewoperator(gate, oper)
+        coeff2 = applysin(old_coeff, theta; sign=sign, param_idx=param_idx)
+        new_operator_dict = _optionallyadd!(new_oper, coeff2, new_operator_dict; max_weight=max_weight, min_abs_coeff=min_abs_coeff, kwargs...)
+    end  # TODO: move this extra logic onto the level of merging_bfs
+
+    return operator_dict, new_operator_dict
+end
+
+
+function _optionallyadd!(oper, coeff, new_operator_dict; max_weight::Real=Inf, min_abs_coeff=0.0, kwargs...)
+    # TODO: move this to merging_bfs
+    if max_weight < Inf
+        if countweight(oper; kwargs...) > max_weight
+            return new_operator_dict
+        end
+    end
+    new_operator_dict[oper] = coeff
+    return new_operator_dict
+end
+
+function _updateorremove!(oper, coeff, operator_dict; min_abs_coeff=0.0, kwargs...)
+    # TODO: move this to merging_bfs
+    operator_dict[oper] = coeff
+    return operator_dict
 end
 
 function _removesmallcoefficients!(operator_dict, min_abs_coeff)
