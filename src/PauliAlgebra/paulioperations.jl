@@ -1,28 +1,54 @@
+
+function countweight(pauli_op::Vector{Symbol}, args...; kwargs...)
+    return sum(op in (:X, :Y, :Z) for op in pauli_op)
+end
+
 function countweight(oper::Integer; kwargs...)
-    mask = alternatingmask(oper)
-    m1 = oper & mask
-    m2 = oper & (mask << 1)
-    res = m1 | (m2 >> 1)
-    return count_ones(res)
+    return countbitweight(oper; kwargs...)
 end
 
 
 function countxy(oper::Integer; kwargs...)
-    mask = alternatingmask(oper)
-
-    op = oper ⊻ (oper >> 1)
-    op = op & mask
-
-    return count_ones(op)
+    return countbitxy(oper; kwargs...)
 end
 
 function countyz(oper::Integer; kwargs...)
-    mask = alternatingmask(oper)
-
-    op = oper & (mask << 1)
-
-    return count_ones(op)
+    return countbityz(oper; kwargs...)
 end
+
+containsXorY(symbs::AbstractArray{Symbol}, args...) = :X in symbs || :Y in symbs
+containsXorY(int::Integer, args...) = countxy(int) > 0
+containsYorZ(int::Integer, args...) = countyz(int) > 0
+
+
+### All the commutation check functions
+
+function commutes(gate_generator::AbstractArray{T}, pauli_op::AbstractArray{T})::Bool where {T}
+    return sum(!commutes(o1, o2) for (o1, o2) in zip(gate_generator, pauli_op)) % 2 == 0
+end
+
+function commutes(sym1::Symbol, sym2::Symbol)::Bool
+    if sym1 == :I || sym2 == :I
+        return true
+    else
+        return sym1 == sym2
+    end
+end
+
+function commutes(sym1::Symbol, pauli_ind::Integer)::Bool
+    return commutes(sym1, inttosymbol(pauli_ind))
+end
+
+function commutes(gate::PauliGateUnion, oper)
+    return sum(!commutes(gate_sym, getelement(oper, qind)) for (qind, gate_sym) in zip(gate.qinds, gate.symbols)) % 2 == 0
+end
+
+function commutes(gate::FastPauliGate, oper::Integer)
+    return bitcommutes(gate.bitoperator, oper)
+end
+
+### Code for the product of pauli_ops
+
 
 function getnewoperator(gate::PauliGateUnion, oper)
     # TODO: make this faster and potentially into bitoperations
@@ -46,55 +72,6 @@ function getnewoperator(gate::FastPauliGate, oper)
     end
     return total_sign, new_oper
 end
-
-
-function commutes(gate_generator::AbstractArray{T}, pauli_op::AbstractArray{T})::Bool where {T}
-    return sum(!commutes(o1, o2) for (o1, o2) in zip(gate_generator, pauli_op)) % 2 == 0
-end
-
-function commutes(sym1::Symbol, sym2::Symbol)::Bool
-    if sym1 == :I || sym2 == :I
-        return true
-    else
-        return sym1 == sym2
-    end
-end
-
-function commutes(sym1::Symbol, pauli_ind::Integer)::Bool
-    return commutes(sym1, inttosymbol(pauli_ind))
-end
-
-function commutes(gate::PauliGateUnion, oper)
-    return sum(!commutes(gate_sym, getelement(oper, qind)) for (qind, gate_sym) in zip(gate.qinds, gate.symbols)) % 2 == 0
-end
-
-function commutes(gate::FastPauliGate, oper::Integer)
-    return fastcommutes(gate.bitoperator, oper)
-end
-
-
-function fastcommutes(op1::Integer, op2::Integer)
-
-    mask0 = alternatingmask(op1)
-    mask1 = mask0 << 1
-
-    # obtain the left (then right) bits of each Pauli pair, in-place
-    aBits0 = mask0 & op1
-    aBits1 = mask1 & op1
-    bBits0 = mask0 & op2
-    bBits1 = mask1 & op2
-
-    # shift left bits to align with right bits
-    aBits1 = aBits1 >> 1
-    bBits1 = bBits1 >> 1
-
-    # sets '10' at every Pauli index where individual pairs don't commute
-    flags = (aBits0 & bBits1) ⊻ (aBits1 & bBits0)
-
-    # strings commute if parity of non-commuting pairs is even
-    return (count_ones(flags) % 2) == 0
-end
-
 
 
 function paulimult(sym1::Symbol, sym2::Symbol)
@@ -140,7 +117,6 @@ function paulimult(op1::AbstractArray{T}, op2::AbstractArray{T}) where {T}
     end
     return total_sign, new_op
 end
-
 
 const levicivita_lut = cat([0 0 0; 0 0 1; 0 -1 0],
     [0 0 -1; 0 0 0; 1 0 0],

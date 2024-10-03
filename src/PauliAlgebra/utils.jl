@@ -1,9 +1,10 @@
+
+const pauli_ops::Vector{Symbol} = [:I, :X, :Y, :Z]
+
 symboltoint(sym::Symbol) = findfirst(s -> s == sym, pauli_ops) - 1
 symboltoint(i::Integer) = i
 inttosymbol(int::Integer) = pauli_ops[int+1]
 inttosymbol(s::Symbol) = s
-
-const pauli_ops::Vector{Symbol} = [:I, :X, :Y, :Z]
 
 function symboltoint(oper::Vector{Symbol})
     nq = length(oper)
@@ -36,7 +37,6 @@ function show(op::Unsigned, n::Int)
     println(print_string)
 
 end
-
 
 function show(d::Dict; max_qubits_shown=16)
     ## TODO

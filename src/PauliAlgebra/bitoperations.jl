@@ -33,22 +33,62 @@ end
     return mask
 end
 
-
-function setelement!(oper::AbstractArray{T}, index, element::T) where {T}
-    oper[index] = element
-    return oper
-end
-
-function setelement!(oper::AbstractArray{T}, index, element::Integer) where {T}
-    return setelement!(oper, index, inttosymbol(element))
-end
-
-function setelement!(oper::Integer, index, element::Symbol)
-    return setelement!(oper, index, symboltoint(element))
+function countbitweight(oper::Integer; kwargs...)
+    mask = alternatingmask(oper)
+    m1 = oper & mask
+    m2 = oper & (mask << 1)
+    res = m1 | (m2 >> 1)
+    return count_ones(res)
 end
 
 
-function setelement!(oper::Integer, index, element::Integer)
+function countbitxy(oper::Integer; kwargs...)
+    mask = alternatingmask(oper)
+
+    op = oper ⊻ (oper >> 1)
+    op = op & mask
+
+    return count_ones(op)
+end
+
+function countbityz(oper::Integer; kwargs...)
+    mask = alternatingmask(oper)
+
+    op = oper & (mask << 1)
+
+    return count_ones(op)
+end
+
+function bitcommutes(op1::Integer, op2::Integer)
+
+    mask0 = alternatingmask(op1)
+    mask1 = mask0 << 1
+
+    # obtain the left (then right) bits of each Pauli pair, in-place
+    aBits0 = mask0 & op1
+    aBits1 = mask1 & op1
+    bBits0 = mask0 & op2
+    bBits1 = mask1 & op2
+
+    # shift left bits to align with right bits
+    aBits1 = aBits1 >> 1
+    bBits1 = bBits1 >> 1
+
+    # sets '10' at every Pauli index where individual pairs don't commute
+    flags = (aBits0 & bBits1) ⊻ (aBits1 & bBits0)
+
+    # strings commute if parity of non-commuting pairs is even
+    return (count_ones(flags) % 2) == 0
+end
+
+
+function getbitelement(oper::Integer, index::Integer)
+    bitindex = 2 * (index - 1)
+    return ((oper >> bitindex) & UInt8(3))
+end
+
+
+function setbitelement!(oper::Integer, index, element::Integer)
     bitindex = 2 * (index - 1)
 
     b1 = _readbit(element, 0)
@@ -77,15 +117,6 @@ function _setbittozero(oper::Integer, bitindex::Integer)
     oper = _setbittoone(oper, bitindex)
     oper = ~oper # flip all bits back
     return oper
-end
-
-function getelement(oper::AbstractArray{T}, index::Int) where {T}
-    return oper[index]
-end
-
-function getelement(oper::Integer, index::Integer)   # TODO: This function is kinda slow.
-    bitindex = 2 * (index - 1)
-    return ((oper >> bitindex) & UInt8(3))
 end
 
 function _readbit(oper::Integer, bitindex::Integer)

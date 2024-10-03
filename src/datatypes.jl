@@ -23,7 +23,3 @@ function copy(path_properties::PathProperties)
 end
 
 Base.show(io::IO, pth::PathProperties) = print(io, "PathProperties($(typeof(pth.coeff)), nsins=$(pth.nsins), ncos=$(pth.ncos), freq=$(pth.freq))")
-
-function getnumcoeff(val::NumericPathProperties)
-    return val.coeff
-end

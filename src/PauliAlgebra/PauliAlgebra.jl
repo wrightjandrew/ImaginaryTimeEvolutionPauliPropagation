@@ -1,7 +1,7 @@
 using Bits
 using BitIntegers
 
-include("./utils.jl")
-include("./bitoperations.jl")
-include("./paulibitoperations.jl")
-include("./paulisymboloperations.jl")
+include("bitoperations.jl")
+include("operatorinterface.jl")
+include("paulioperations.jl")
+include("utils.jl")

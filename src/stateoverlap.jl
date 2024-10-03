@@ -14,9 +14,9 @@ function getnumcoeff(val::Real)
     return val
 end
 
-# function getnumcoeff(val::NumericPathProperties)
-#     return val.coeff
-# end
+function getnumcoeff(val::NumericPathProperties)
+    return val.coeff
+end
 
 function zerofilter(res_dict)
     # return Dict(k => v for (k, v) in pairs(res_dict) if !annihilatesatzero(k))
@@ -25,3 +25,7 @@ end
 
 evalagainstzero(res_dict) = evalagainsinitial(res_dict, containsXorY)
 
+
+function annihilatesatzero(op)
+    return containsXorY(op)
+end
