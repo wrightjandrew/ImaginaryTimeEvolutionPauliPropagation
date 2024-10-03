@@ -27,6 +27,25 @@ function bricklayertopology(qindices; periodic=false)
     end
 end
 
+function get2dtopology(nx, ny)
+    topology = []
+
+    for jj in 1:ny
+        for ii in 1:nx
+
+            if jj <= ny - 1
+                push!(topology, ((jj - 1) * nx + ii, jj * nx + ii))
+            end
+
+            if ii + 1 <= nx
+                push!(topology, ((jj - 1) * nx + ii, (jj - 1) * nx + ii + 1))
+            end
+        end
+    end
+
+    return topology
+
+end
 
 function get2dstaircasetopology(nx, ny)
     next_inds = [1]
@@ -74,7 +93,7 @@ function hardwareefficientcircuit(n_qubits, n_layers; topology=nothing)
 
         for pair in topology
             # CNOT or YY gate here
-            # push!(circuit, StaticGate("CNOT", pair))  # TODO: CNOT is not fast yet.
+            # push!(circuit, StaticGate(:CNOT, collect(pair)))  # TODO: CNOT is not fast yet.
             push!(circuit, PauliGate([:Y, :Y], collect(pair)))
         end
     end

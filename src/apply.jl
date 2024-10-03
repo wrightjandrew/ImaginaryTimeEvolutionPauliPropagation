@@ -1,3 +1,4 @@
+### The Cliffords
 
 function apply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, param_ind, args...; max_weight::Real=Inf, kwargs...)
     if length(gate.qind) == 1
@@ -18,9 +19,36 @@ function apply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, p
     return new_operator_dict, old_operator_dict, param_ind
 end
 
+function _singleapply!(gate::StaticGate, operator, coefficient)
+    local_operator = inttosymbol(getelement(operator, gate.qind))
+
+    relations_function = symbol_function_map[local_operator]
+    sign, new_symbol = relations_function[gate.symbol]
+
+    operator = setelement!(operator, gate.qinds[1], new_symbol)
+    coefficient *= sign
+    return operator, coefficient
+end
+
+function _twoapply!(gate::StaticGate, operator, coefficient)
+    qind1, qind2 = gate.qind
+    symb1 = inttosymbol(getelement(operator, qind1))
+    symb2 = inttosymbol(getelement(operator, qind2))
+
+    relations_function = clifford_function_map[gate.symbol]
+
+    sign, new_symbol1, new_symbol2 = relations_function[symb1, symb2]
+
+    operator = setelement!(operator, qind1, new_symbol1)
+    operator = setelement!(operator, qind2, new_symbol2)
+    coefficient *= sign
+    return operator, coefficient
+end
+
+### The Pauli Gates
+
 function apply(gate::PauliGateUnion, operator_dict, new_operator_dict, thetas, param_ind, args...; customtruncationfunction=nothing, min_abs_coeff=0.0, kwargs...)
     theta = thetas[param_ind]
-
 
     for (oper, old_coeff) in operator_dict
 

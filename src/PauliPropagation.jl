@@ -17,6 +17,7 @@ export
 include("circuits.jl")
 export
     bricklayertopology,
+    get2dtopology,
     get2dstaircasetopology,
     hardwareefficientcircuit,
     tfitrottercircuit,
