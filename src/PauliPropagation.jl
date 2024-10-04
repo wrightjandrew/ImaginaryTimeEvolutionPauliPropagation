@@ -30,6 +30,7 @@ include("./PauliAlgebra/PauliAlgebra.jl")
 export
     inttosymbol,
     symboltoint,
+    inttostring,
     getelement,
     setelement!,
     show,
