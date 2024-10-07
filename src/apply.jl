@@ -1,23 +1,15 @@
 ### The Cliffords
 
-function apply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, param_ind, args...; max_weight::Real=Inf, kwargs...)
-    if length(gate.qind) == 1
-        _func! = _singleapply!
-        checkweight = false
+function apply(gate::StaticGate, operator, coefficient)   # TODO: revamp the Clifford gate approach
+    if length(gate.qinds) == 1
+        func = _singleapply!
     else
-        _func! = _twoapply!
-        checkweight = true
+        func = _twoapply!
     end
-    # TODO: should we even do truncations here given that we do not increase complexity?
 
-    for (oper, coeff) in old_operator_dict
-        oper, coeff = _func!(gate, oper, coeff)
-
-        new_operator_dict[oper] = coeff
-    end
-    empty!(old_operator_dict)
-    return new_operator_dict, old_operator_dict, param_ind
+    return fun(gate, copy(operator), coefficient)
 end
+
 
 function _singleapply!(gate::StaticGate, operator, coefficient)
     local_operator = inttosymbol(getelement(operator, gate.qind))
@@ -45,29 +37,27 @@ function _twoapply!(gate::StaticGate, operator, coefficient)
     return operator, coefficient
 end
 
-### The Pauli Gates
+### The Pauli Gates  
 
-function apply(gate::PauliGateUnion, operator_dict, new_operator_dict, thetas, param_ind, args...; customtruncationfunction=nothing, min_abs_coeff=0.0, kwargs...)
-    theta = thetas[param_ind]
+# TODO: This should not be hard-coded for the merging_bfs function. Instead the merging_bfs function should call a more generic
+#       version of the function that is then stored here.
 
-    for (oper, old_coeff) in operator_dict
-
-        operator_dict, new_operator_dict = applystep!(gate, oper, theta, param_ind, old_coeff, operator_dict, new_operator_dict; kwargs...)  #  max_weight=here_max_weight, 
-
+function apply(gate::PauliGateUnion, operator, theta, coefficient=1.0)
+    if commutes(gate, operator)
+        return operator, coefficient
+    else
+        return applynoncummuting(gate, operator, theta, coefficient)
     end
-
-    operator_dict, new_operator_dict = mergeandclear!(operator_dict, new_operator_dict)
-    param_ind -= 1
-
-    # small coeffcient truncation
-    operator_dict = _removesmallcoefficients!(operator_dict, min_abs_coeff)
-
-    if !isnothing(customtruncationfunction)
-        customtruncationfunction(operator_dict, param_ind)  # changes in-place
-    end
-
-    return operator_dict, new_operator_dict, param_ind
 end
+
+function applynoncummuting(gate::PauliGateUnion, operator, theta, coefficient)
+    coeff1 = applycos(coefficient, theta)
+    sign, new_oper = getnewoperator(gate, operator)
+    coeff2 = applysin(coefficient, theta; sign=sign)
+
+    return operator, coeff1, new_oper, coeff2
+end
+
 
 function applysin(old_coeff::Number, theta; sign=1, kwargs...)
     return old_coeff * sin(theta) * sign

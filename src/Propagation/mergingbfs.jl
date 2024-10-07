@@ -56,6 +56,48 @@ function applystep!(gate::PauliGateUnion, oper, theta, param_idx, old_coeff, ope
     return operator_dict, new_operator_dict
 end
 
+# TODO: Disentangle the apply gate to operator logic from this function here.
+function apply(gate::PauliGateUnion, operator_dict::Dict, new_operator_dict::Dict, thetas, param_ind, args...; customtruncationfunction=nothing, min_abs_coeff=0.0, kwargs...)
+    theta = thetas[param_ind]
+
+    for (oper, old_coeff) in operator_dict
+
+        operator_dict, new_operator_dict = applystep!(gate, oper, theta, param_ind, old_coeff, operator_dict, new_operator_dict; kwargs...)  #  max_weight=here_max_weight, 
+
+    end
+
+    operator_dict, new_operator_dict = mergeandclear!(operator_dict, new_operator_dict)
+    param_ind -= 1
+
+    # small coeffcient truncation
+    operator_dict = _removesmallcoefficients!(operator_dict, min_abs_coeff)
+
+    if !isnothing(customtruncationfunction)
+        customtruncationfunction(operator_dict, param_ind)  # changes in-place
+    end
+
+    return operator_dict, new_operator_dict, param_ind
+end
+
+
+function apply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, param_ind, args...; max_weight::Real=Inf, kwargs...)
+    if length(gate.qind) == 1
+        _func! = _singleapply!
+        checkweight = false
+    else
+        _func! = _twoapply!
+        checkweight = true
+    end
+    # TODO: should we even do truncations here given that we do not increase complexity?
+
+    for (oper, coeff) in old_operator_dict
+        oper, coeff = _func!(gate, oper, coeff)
+
+        new_operator_dict[oper] = coeff
+    end
+    empty!(old_operator_dict)
+    return new_operator_dict, old_operator_dict, param_ind
+end
 
 function _optionallyadd!(oper, coeff, new_operator_dict; max_weight::Real=Inf, min_abs_coeff=0.0, kwargs...)
     # TODO: move this to merging_bfs
