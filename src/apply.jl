@@ -50,12 +50,12 @@ function apply(gate::PauliGateUnion, operator, theta, coefficient=1.0)
     end
 end
 
-function applynoncummuting(gate::PauliGateUnion, operator, theta, coefficient)
+function applynoncummuting(gate::PauliGateUnion, operator, theta, coefficient=1.0)
     coeff1 = applycos(coefficient, theta)
     sign, new_oper = getnewoperator(gate, operator)
     coeff2 = applysin(coefficient, theta; sign=sign)
 
-    return operator, coeff1, new_oper, coeff2
+    return operator, coeff1, new_oper, coeff2   # TODO: when does this ever not allocate memory?
 end
 
 
