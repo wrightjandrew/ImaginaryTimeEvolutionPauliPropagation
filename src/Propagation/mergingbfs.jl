@@ -13,7 +13,7 @@ end
 
 
 function mergingbfs(circ, d, thetas; kwargs...)
-    param_ind = length(thetas)
+    param_idx = length(thetas)
 
     second_d = typeof(d)()  # pre-allocating somehow doesn't do anything
 
@@ -21,66 +21,30 @@ function mergingbfs(circ, d, thetas; kwargs...)
     # - decide where to reverse the circuit
     # - verbose option  
     for gate in reverse(circ)
-        d, second_d, param_ind = apply(gate, d, second_d, thetas, param_ind; kwargs...)
+        d, second_d, param_idx = mergingapply(gate, d, second_d, thetas, param_idx; kwargs...)
     end
     return d
 end
 
 
-function applystep!(gate::PauliGateUnion, oper, theta, param_idx, old_coeff, operator_dict, new_operator_dict, args...; max_freq::Real=Inf, max_weight::Real=Inf, min_abs_coeff=0.0, max_sins::Real=Inf, kwargs...)
+function mergingapply(gate, operator_dict::Dict, new_operator_dict::Dict, thetas, param_idx, args...; customtruncationfunction=nothing, min_abs_coeff=0.0, kwargs...)
 
+    # param_idx is decremented by one if the gate is a Pauli gate
+    param_idx = applygatetoall!(gate, thetas, param_idx, operator_dict, new_operator_dict)
 
-    if commutes(gate, oper)
-        # old_coeff = applyidentity(old_coeff)
-        return operator_dict, new_operator_dict
-    end
+    mergeandclear!(operator_dict, new_operator_dict)
 
-    # TODO: remove low level details from this level
-    if !frequencytruncation(old_coeff, max_freq - 1)  # want to stop before splitting
-        delete!(operator_dict, oper)
-        return operator_dict, new_operator_dict
-    end
-
-
-    coeff1 = applycos(old_coeff, theta; param_idx=param_idx)
-
-    # TODO: new design is to delete small values after merging. Generally make this function less complicated.
-    operator_dict = _updateorremove!(oper, coeff1, operator_dict; min_abs_coeff=min_abs_coeff)
-
-    if !maxsintruncation(old_coeff, max_sins - 1)  # -1 because we want to stop the split before it happens. TODO: adapt after pulling out truncations to top level.
-        sign, new_oper = getnewoperator(gate, oper)
-        coeff2 = applysin(old_coeff, theta; sign=sign, param_idx=param_idx)
-        new_operator_dict = _optionallyadd!(new_oper, coeff2, new_operator_dict; max_weight=max_weight, min_abs_coeff=min_abs_coeff, kwargs...)
-    end  # TODO: move this extra logic onto the level of merging_bfs
-
-    return operator_dict, new_operator_dict
-end
-
-# TODO: Disentangle the apply gate to operator logic from this function here.
-function apply(gate::PauliGateUnion, operator_dict::Dict, new_operator_dict::Dict, thetas, param_ind, args...; customtruncationfunction=nothing, min_abs_coeff=0.0, kwargs...)
-    theta = thetas[param_ind]
-
-    for (oper, old_coeff) in operator_dict
-
-        operator_dict, new_operator_dict = applystep!(gate, oper, theta, param_ind, old_coeff, operator_dict, new_operator_dict; kwargs...)  #  max_weight=here_max_weight, 
-
-    end
-
-    operator_dict, new_operator_dict = mergeandclear!(operator_dict, new_operator_dict)
-    param_ind -= 1
-
-    # small coeffcient truncation
-    operator_dict = _removesmallcoefficients!(operator_dict, min_abs_coeff)
+    checktruncationonall!(operator_dict; kwargs...)
 
     if !isnothing(customtruncationfunction)
-        customtruncationfunction(operator_dict, param_ind)  # changes in-place
+        customtruncationfunction(operator_dict, param_idx)  # changes in-place
     end
 
-    return operator_dict, new_operator_dict, param_ind
+    return operator_dict, new_operator_dict, param_idx
 end
 
 
-function apply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, param_ind, args...; max_weight::Real=Inf, kwargs...)
+function mergingapply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, param_idx, args...; max_weight::Real=Inf, kwargs...)
     if length(gate.qind) == 1
         _func! = _singleapply!
         checkweight = false
@@ -96,37 +60,42 @@ function apply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, p
         new_operator_dict[oper] = coeff
     end
     empty!(old_operator_dict)
-    return new_operator_dict, old_operator_dict, param_ind
+    return new_operator_dict, old_operator_dict, param_idx
 end
 
-function _optionallyadd!(oper, coeff, new_operator_dict; max_weight::Real=Inf, min_abs_coeff=0.0, kwargs...)
-    # TODO: move this to merging_bfs
-    if max_weight < Inf
-        if countweight(oper; kwargs...) > max_weight
-            return new_operator_dict
-        end
+### APPLY
+
+function applygatetoall!(gate, thetas::AbstractVector, param_idx::Integer, operator_dict, new_operator_dict, args...; kwargs...)
+    theta = 0.0  # This gate seems to not uuse parameters
+    for (operator, coeff) in operator_dict
+        applygatetoone!(gate, operator, coeff, theta, param_idx, operator_dict, new_operator_dict; kwargs...)  #  max_weight=here_max_weight, 
     end
-    new_operator_dict[oper] = coeff
-    return new_operator_dict
 end
 
-function _updateorremove!(oper, coeff, operator_dict; min_abs_coeff=0.0, kwargs...)
-    # TODO: move this to merging_bfs
-    operator_dict[oper] = coeff
-    return operator_dict
-end
-
-function _removesmallcoefficients!(operator_dict, min_abs_coeff)
-    if min_abs_coeff > 0.0
-        for (oper, coeff) in operator_dict
-            if min_coeff_condition(coeff, min_abs_coeff)
-                delete!(operator_dict, oper)
-            end
-        end
+function applygatetoall!(gate::PauliGateUnion, thetas::AbstractVector, param_idx::Integer, operator_dict, new_operator_dict, args...; kwargs...)
+    theta = thetas[param_idx]
+    for (operator, coeff) in operator_dict
+        applygatetoone!(gate, operator, coeff, theta, param_idx, operator_dict, new_operator_dict; kwargs...)  #  max_weight=here_max_weight, 
     end
-    return operator_dict
+    return param_idx - 1  # decrement parameter index by one
 end
 
+@inline function applygatetoone!(gate::PauliGateUnion, oper, old_coeff, theta, param_idx, operator_dict, new_operator_dict, args...; kwargs...)
+
+    if commutes(gate, oper)
+        return operator_dict, new_operator_dict
+    end
+
+    coeff1 = applycos(old_coeff, theta; param_idx=param_idx)
+    sign, new_oper = getnewoperator(gate, oper)
+    coeff2 = applysin(old_coeff, theta; sign=sign, param_idx=param_idx)
+    operator_dict[oper] = coeff1
+    new_operator_dict[new_oper] = coeff2
+
+    return
+end
+
+### MERGE
 
 # TODO: custom merging function beyond mergewith!
 function mergeandclear!(operator_dict::Dict, new_operator_dict::Dict)
@@ -149,4 +118,32 @@ end
 
 function merge(coeff1::Number, coeff2::Number)
     return coeff1 + coeff2
+end
+
+### TRUNCATE
+
+function checktruncationonall!(operator_dict; max_weight::Real=Inf, min_abs_coeff=0.0, max_freq::Real=Inf, max_sins::Real=Inf, kwargs...)
+    # TODO: This does currently hinder performance, even if we don't truncated
+    # approx 55ms -> 66ms
+    for (operator, coeff) in operator_dict
+        checktruncationonone!(operator_dict, operator, coeff; max_weight=max_weight, min_abs_coeff=min_abs_coeff, max_freq=max_freq, max_sins=max_sins, kwargs...)
+    end
+    return
+end
+
+@inline function checktruncationonone!(operator_dict, operator, coeff; max_weight::Real=Inf, min_abs_coeff=0.0, max_freq::Real=Inf, max_sins::Real=Inf, kwargs...)
+    we_truncate = false
+    if truncateweight(operator, max_weight)
+        we_truncate = true
+    elseif truncatemincoeff(coeff, min_abs_coeff)
+        we_truncate = true
+    elseif truncatefrequency(coeff, max_freq)
+        we_truncate = true
+    elseif truncatesins(coeff, max_sins)
+        we_truncate = true
+    end
+    if we_truncate
+        delete!(operator_dict, operator)
+    end
+    return
 end

@@ -38,7 +38,7 @@ export
     containsYorZ
 
 include("apply.jl")
-export apply  # What should I export here?
+export apply, applynoncummuting  # What should I export here?
 
 include("truncations.jl")
 
