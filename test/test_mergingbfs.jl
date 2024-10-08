@@ -7,10 +7,8 @@ function numericalPP(nq, nl, W, min_abs_coeff)
     symbs[round(Int, nq / 2)] = :Z   # as symbol. Also works but is slower.
 
     obsint = symboltoint(symbs)  # for performance we work with bitoperations
-    show(obsint, nq)
 
     topo = bricklayertopology(nq; periodic=false)
-    # topo = get2dtopology(4, 4)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
     fastcirc = tofastgates(circ)
     m = length(fastcirc)
@@ -19,7 +17,7 @@ function numericalPP(nq, nl, W, min_abs_coeff)
     thetas = randn(m)
 
     dnum = mergingbfs(fastcirc, obsint, thetas; max_weight=W, min_abs_coeff=min_abs_coeff)
-    show(dnum)
+
     return evalagainstzero(dnum) # expectation
 end
 
@@ -31,10 +29,9 @@ function hybridPP(nq, nl, W, min_abs_coeff, max_freq)
     symbs[round(Int, nq / 2)] = :Z   # as symbol. Also works but is slower.
 
     obsint = symboltoint(symbs)  # for performance we work with bitoperations
-    show(obsint, nq)
+
 
     topo = bricklayertopology(nq; periodic=false)
-    # topo = get2dtopology(4, 4)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
     fastcirc = tofastgates(circ)
     m = length(fastcirc)
@@ -43,7 +40,7 @@ function hybridPP(nq, nl, W, min_abs_coeff, max_freq)
     thetas = randn(m)
 
     dhyb = mergingbfs(fastcirc, obsint, NumericPathProperties(1.0), thetas; max_weight=W, max_freq=max_freq, min_abs_coeff=min_abs_coeff)
-    show(dhyb)
+
     return evalagainstzero(dhyb)
 end
 
@@ -54,10 +51,8 @@ function surrogatePP(nq, nl, W, max_freq)
     symbs[round(Int, nq / 2)] = :Z   # as symbol. Also works but is slower.
 
     obsint = symboltoint(symbs)  # for performance we work with bitoperations
-    show(obsint, nq)
 
     topo = bricklayertopology(nq; periodic=false)
-    # topo = get2dtopology(4, 4)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
     fastcirc = tofastgates(circ)
     m = length(fastcirc)
