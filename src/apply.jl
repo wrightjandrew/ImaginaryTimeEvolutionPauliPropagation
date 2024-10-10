@@ -18,7 +18,7 @@ function _singleapply!(gate::StaticGate, operator, coefficient)
     sign, new_symbol = relations_function[gate.symbol]
 
     operator = setelement!(operator, gate.qinds[1], new_symbol)
-    coefficient *= sign
+    coefficient = _multiplysign!(coefficient, sign)
     return operator, coefficient
 end
 
@@ -33,8 +33,18 @@ function _twoapply!(gate::StaticGate, operator, coefficient)
 
     operator = setelement!(operator, qind1, new_symbol1)
     operator = setelement!(operator, qind2, new_symbol2)
-    coefficient *= sign
+    coefficient = _multiplysign!(coefficient, sign)
     return operator, coefficient
+end
+
+function _multiplysign!(coefficient::Number, sign)
+    coefficient *= sign
+    return coefficient
+end
+
+function _multiplysign!(coefficient::NumericPathProperties, sign)
+    coefficient.coeff *= sign
+    return coefficient
 end
 
 ### The Pauli Gates  

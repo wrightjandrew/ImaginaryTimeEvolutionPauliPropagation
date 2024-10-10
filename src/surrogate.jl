@@ -29,6 +29,18 @@ end
 
 NodePathProperties(coeff) = NodePathProperties(coeff, 0, 0, 0)
 
+function _multiplysign!(coefficient::NodePathProperties, sign)
+    for ii in eachindex(coefficient.coeff.signs)
+        coefficient.coeff.signs[ii] *= sign
+    end
+    return coefficient
+end
+
+function _multiplysign!(coefficient::EvalEndNode, sign)
+    coefficient.coeff.coefficient *= sign
+    return coefficient
+end
+
 function operatortopathdict(op, coefficient=1.0)
     op = deepcopy(op)
     # d = Dict(op => PathProperties(EvalEndNode(operator=op, coefficient=coefficient, cummulative_value=coefficient)))
