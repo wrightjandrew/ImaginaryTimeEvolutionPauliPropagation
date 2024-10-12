@@ -44,7 +44,11 @@ function commutes(gate::PauliGateUnion, oper)
 end
 
 function commutes(gate::FastPauliGate, oper::Integer)
-    return bitcommutes(gate.bitoperator, oper)
+    return commutes(gate.bitoperator, oper)
+end
+
+function commutes(oper1::Integer, oper2::Integer)
+    return bitcommutes(oper1, oper2)
 end
 
 ### Code for the product of pauli_ops
