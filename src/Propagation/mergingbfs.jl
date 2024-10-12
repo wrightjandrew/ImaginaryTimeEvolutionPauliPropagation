@@ -44,7 +44,7 @@ function mergingapply(gate, operator_dict::Dict, new_operator_dict::Dict, thetas
 end
 
 
-function mergingapply(gate::StaticGate, old_operator_dict, new_operator_dict, thetas, param_idx, args...; max_weight::Real=Inf, kwargs...)
+function mergingapply(gate::CliffordGate, old_operator_dict, new_operator_dict, thetas, param_idx, args...; max_weight::Real=Inf, kwargs...)
     if length(gate.qind) == 1
         _func! = _singleapply!
         checkweight = false

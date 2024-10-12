@@ -1,45 +1,55 @@
 ### The Cliffords
 
-function apply(gate::StaticGate, operator, coefficient)   # TODO: revamp the Clifford gate approach
-    if length(gate.qinds) == 1
-        func = _singleapply!
-    else
-        func = _twoapply!
+function apply(gate::CliffordGate, operator, coefficient=1.0) # TODO: write tests for this
+    map_array = default_clifford_map[gate.symbol]
+    return applywithmap(gate, operator, coefficient, map_array)
+end
+
+function applywithmap(gate, operator, coefficient, map_array)
+    operator = copy(operator)
+    qinds = gate.qinds
+
+    lookup_op = typeof(operator)(0)
+    for ii in eachelement(qinds)
+        lookup_op = setelement!(lookup_op, ii, getelement(operator, qinds[ii]))
     end
-
-    return fun(gate, copy(operator), coefficient)
-end
-
-
-function _singleapply!(gate::StaticGate, operator, coefficient)
-    local_operator = inttosymbol(getelement(operator, gate.qind))
-
-    relations_function = symbol_function_map[local_operator]
-    sign, new_symbol = relations_function[gate.symbol]
-
-    operator = setelement!(operator, gate.qinds[1], new_symbol)
+    sign, new_op = map_array[lookup_op]
+    for ii in eachelement(qinds)
+        operator = setelement!(operator, qinds[ii], getelement(new_op, ii))
+    end
     coefficient = _multiplysign!(coefficient, sign)
     return operator, coefficient
 end
 
-function _twoapply!(gate::StaticGate, operator, coefficient)
-    qind1, qind2 = gate.qind
-    symb1 = inttosymbol(getelement(operator, qind1))
-    symb2 = inttosymbol(getelement(operator, qind2))
 
-    relations_function = clifford_function_map[gate.symbol]
+# function _singleapply!(gate::CliffordGate, operator, coefficient)
+#     local_operator = inttosymbol(getelement(operator, gate.qind))
 
-    sign, new_symbol1, new_symbol2 = relations_function[symb1, symb2]
+#     relations_function = symbol_function_map[local_operator]
+#     sign, new_symbol = relations_function[gate.symbol]
 
-    operator = setelement!(operator, qind1, new_symbol1)
-    operator = setelement!(operator, qind2, new_symbol2)
-    coefficient = _multiplysign!(coefficient, sign)
-    return operator, coefficient
-end
+#     operator = setelement!(operator, gate.qinds[1], new_symbol)
+#     coefficient = _multiplysign!(coefficient, sign)
+#     return operator, coefficient
+# end
+
+# function _twoapply!(gate::CliffordGate, operator, coefficient)
+#     qind1, qind2 = gate.qind
+#     symb1 = inttosymbol(getelement(operator, qind1))
+#     symb2 = inttosymbol(getelement(operator, qind2))
+
+#     relations_function = clifford_function_map[gate.symbol]
+
+#     sign, new_symbol1, new_symbol2 = relations_function[symb1, symb2]
+
+#     operator = setelement!(operator, qind1, new_symbol1)
+#     operator = setelement!(operator, qind2, new_symbol2)
+#     coefficient = _multiplysign!(coefficient, sign)
+#     return operator, coefficient
+# end
 
 function _multiplysign!(coefficient::Number, sign)
-    coefficient *= sign
-    return coefficient
+    return coefficient * sign
 end
 
 function _multiplysign!(coefficient::NumericPathProperties, sign)
@@ -48,9 +58,6 @@ function _multiplysign!(coefficient::NumericPathProperties, sign)
 end
 
 ### The Pauli Gates  
-
-# TODO: This should not be hard-coded for the merging_bfs function. Instead the merging_bfs function should call a more generic
-#       version of the function that is then stored here.
 
 function apply(gate::PauliGateUnion, operator, theta, coefficient=1.0)
     if commutes(gate, operator)

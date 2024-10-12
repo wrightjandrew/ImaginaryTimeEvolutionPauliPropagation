@@ -6,13 +6,17 @@ include("datatypes.jl")
 export PathProperties, NumericPathProperties
 
 
-include("gates.jl")
+include("Gates/Gates.jl")
 export
     Gate,
     PauliGate,
     FastPauliGate,
-    StaticGate,
-    tofastgates
+    tofastgates,
+    CliffordGate,
+    default_clifford_map,
+    reset_clifford_map!,
+    apply,
+    applynoncummuting
 
 include("circuits.jl")
 export
@@ -36,9 +40,6 @@ export
     show,
     containsXorY,
     containsYorZ
-
-include("apply.jl")
-export apply, applynoncummuting  # What should I export here?
 
 include("truncations.jl")
 

@@ -93,7 +93,7 @@ function hardwareefficientcircuit(n_qubits, n_layers; topology=nothing)
 
         for pair in topology
             # CNOT or YY gate here
-            # push!(circuit, StaticGate(:CNOT, collect(pair)))  # TODO: CNOT is not fast yet.
+            # push!(circuit, CliffordGate(:CNOT, collect(pair)))  # TODO: CNOT is not fast yet.
             push!(circuit, PauliGate([:Y, :Y], collect(pair)))
         end
     end
