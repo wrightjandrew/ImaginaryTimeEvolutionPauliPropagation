@@ -22,17 +22,6 @@ function getinttype(nq)
     return inttype
 end
 
-@generated function alternatingmask(int::T) where {T<:Integer}
-    n_bits = min(bitsize(int), 2_048)  # for 1024 qubits
-    mask = int(0)
-    for ii in 0:(n_bits-1)
-        if ii % 2 == 0
-            mask = _setbittoone(mask, ii)
-        end
-    end
-    return mask
-end
-
 function countbitweight(oper::Integer; kwargs...)
     mask = alternatingmask(oper)
     m1 = oper & mask
@@ -122,4 +111,15 @@ end
 function _readbit(oper::Integer, bitindex::Integer)
     # bitindex begins at 0
     return (oper >> bitindex) & UInt8(1)
+end
+
+@generated function alternatingmask(int::T) where {T<:Integer}
+    n_bits = min(bitsize(int), 2_048)  # for 1024 qubits
+    mask = int(0)
+    for ii in 0:(n_bits-1)
+        if ii % 2 == 0
+            mask = _setbittoone(mask, ii)
+        end
+    end
+    return mask
 end
