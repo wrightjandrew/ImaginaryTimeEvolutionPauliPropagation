@@ -22,53 +22,45 @@ function reset_clifford_map!()
 end
 
 
-# const H_relations = Dict(
-#     :I => (1, :I),
-#     :X => (1, :Z),
-#     :Y => (-1, :Y),
-#     :Z => (1, :X),
-# )
+### Applying Clifford gates
 
-# const CNOT_relations = Dict(
-#     (:I, :I) => (1, :I, :I),
-#     (:I, :X) => (1, :I, :X),
-#     (:I, :Y) => (1, :Z, :Y),
-#     (:I, :Z) => (1, :Z, :Z),
-#     (:X, :I) => (1, :X, :X),
-#     (:X, :X) => (1, :X, :I),
-#     (:X, :Y) => (1, :Y, :Z),
-#     (:X, :Z) => (-1, :Y, :Y),
-#     (:Y, :I) => (1, :Y, :X),
-#     (:Y, :X) => (1, :Y, :I),
-#     (:Y, :Y) => (-1, :X, :Z),
-#     (:Y, :Z) => (1, :X, :Y),
-#     (:Z, :I) => (1, :Z, :I),
-#     (:Z, :X) => (1, :Z, :X),
-#     (:Z, :Y) => (1, :I, :Y),
-#     (:Z, :Z) => (1, :I, :Z),
-# )
+function apply(gate::CliffordGate, operator, coefficient=1.0) # TODO: write tests for this
+    map_array = default_clifford_map[gate.symbol]
+    return applywithmap(gate, operator, coefficient, map_array)
+end
 
-# const ZZpihalf_relations = Dict(  # with transpose || with permutedims
-#     (:I, :I) => (1, :I, :I),
-#     (:I, :X) => (1, :Z, :Y),
-#     (:I, :Y) => (-1, :Z, :X),
-#     (:I, :Z) => (1, :I, :Z),
-#     (:X, :I) => (1, :Y, :Z),
-#     (:X, :X) => (1, :X, :X),
-#     (:X, :Y) => (1, :X, :Y),
-#     (:X, :Z) => (1, :Y, :I),
-#     (:Y, :I) => (-1, :X, :Z),
-#     (:Y, :X) => (1, :Y, :X),
-#     (:Y, :Y) => (1, :Y, :Y),
-#     (:Y, :Z) => (-1, :X, :I),
-#     (:Z, :I) => (1, :Z, :I),
-#     (:Z, :X) => (1, :I, :Y),
-#     (:Z, :Y) => (-1, :I, :X),
-#     (:Z, :Z) => (1, :Z, :Z),
-# )
+function applywithmap(gate, operator, coefficient, map_array)
+    operator = copy(operator)
+    qinds = gate.qinds
 
-# const clifford_function_map = Dict(
-#     :X => H_relations,
-#     :CNOT => CNOT_relations,
-#     :ZZpihalf => ZZpihalf_relations,
-# )
+    lookup_op = _extractlookupop(operator, qinds)
+    sign, new_op = map_array[lookup_op+1]  # +1 because Julia is 1-indexed and lookup_op is 0-indexed
+    operator = _insertnewop!(operator, new_op, qinds)
+
+    coefficient = _multiplysign!(coefficient, sign)
+    return operator, coefficient
+end
+
+function _extractlookupop(operator, qinds)
+    lookup_op = typeof(operator)(0)
+    for ii in eachindex(qinds)
+        lookup_op = setelement!(lookup_op, ii, getelement(operator, qinds[ii]))
+    end
+    return lookup_op
+end
+
+function _insertnewop!(operator, new_op, qinds)
+    for ii in eachindex(qinds)
+        operator = setelement!(operator, qinds[ii], getelement(new_op, ii))
+    end
+    return operator
+end
+
+function _multiplysign!(coefficient::Number, sign)
+    return coefficient * sign
+end
+
+function _multiplysign!(coefficient::NumericPathProperties, sign)
+    coefficient.coeff *= sign
+    return coefficient
+end

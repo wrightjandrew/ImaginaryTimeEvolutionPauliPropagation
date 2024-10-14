@@ -33,3 +33,49 @@ function tofastgates(circ::AbstractVector)
     end
     return fast_circ
 end
+
+
+### Apply Pauli gates  
+
+function apply(gate::PauliGateUnion, operator, theta, coefficient=1.0)
+    if commutes(gate, operator)
+        return operator, coefficient
+    else
+        return applynoncummuting(gate, operator, theta, coefficient)
+    end
+end
+
+function applynoncummuting(gate::PauliGateUnion, operator, theta, coefficient=1.0)
+    coeff1 = applycos(coefficient, theta)
+    sign, new_oper = getnewoperator(gate, operator)
+    coeff2 = applysin(coefficient, theta; sign=sign)
+
+    return operator, coeff1, new_oper, coeff2   # TODO: when does this ever not allocate memory?
+end
+
+
+function applysin(old_coeff::Number, theta; sign=1, kwargs...)
+    return old_coeff * sin(theta) * sign
+end
+
+function applycos(old_coeff::Number, theta; sign=1, kwargs...)
+    return old_coeff * cos(theta) * sign
+end
+
+function applysin(path_properties::PathProperties, theta; sign=1, kwargs...)
+    # path_properties = copy(path_properties) # copy not necesasry. Was done in applycos.
+    path_properties.nsins += 1
+    path_properties.freq += 1
+
+    path_properties.coeff = applysin(path_properties.coeff, theta; sign, kwargs...)
+    return path_properties
+end
+
+function applycos(path_properties::PathProperties, theta; sign=1, kwargs...)
+    path_properties = copy(path_properties)
+    path_properties.ncos += 1
+    path_properties.freq += 1
+
+    path_properties.coeff = applycos(path_properties.coeff, theta; sign, kwargs...)
+    return path_properties
+end
