@@ -17,6 +17,11 @@ using Test
     @test hybridPP(8, 4, Inf, 0.0, Inf) ≈ 0.21720058439757214
     @test surrogatePP(8, 4, Inf, Inf) ≈ 0.21720058439757214
 
+
+    Random.seed!(42)
+    include("test_noisechannels.jl")
+    @test paulinoise(8, 4, Inf, 0.0)
+
     include("test_gate.jl")
 
 end
