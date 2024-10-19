@@ -7,11 +7,10 @@ function paulinoise(nq, nl, W, min_abs_coeff)
     topo = bricklayertopology(nq; periodic=false)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
 
-    fastcirc = tofastgates(circ)
-    m = countparameters(fastcirc)
+    m = countparameters(circ)
 
-    depolarizing_circ = deepcopy(fastcirc)
-    pauli_circ = deepcopy(fastcirc)
+    depolarizing_circ = deepcopy(circ)
+    pauli_circ = deepcopy(circ)
 
     where_ind = rand(1:m)
     q_ind = rand(1:nq)
@@ -33,5 +32,5 @@ function paulinoise(nq, nl, W, min_abs_coeff)
 
     dnum2 = mergingbfs(pauli_circ, obsint, thetas2; max_weight=W, min_abs_coeff=min_abs_coeff)
 
-    return evalagainstzero(dnum1) ≈ evalagainstzero(dnum2)
+    return overlapwithzero(dnum1) ≈ overlapwithzero(dnum2)
 end

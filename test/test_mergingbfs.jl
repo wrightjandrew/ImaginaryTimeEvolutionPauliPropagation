@@ -10,15 +10,15 @@ function numericalPP(nq, nl, W, min_abs_coeff)
 
     topo = bricklayertopology(nq; periodic=false)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
-    fastcirc = tofastgates(circ)
-    m = countparameters(fastcirc)
+
+    m = countparameters(circ)
 
     Random.seed!(42)
     thetas = randn(m)
 
-    dnum = mergingbfs(fastcirc, obsint, thetas; max_weight=W, min_abs_coeff=min_abs_coeff)
+    dnum = mergingbfs(circ, obsint, thetas; max_weight=W, min_abs_coeff=min_abs_coeff)
 
-    return evalagainstzero(dnum) # expectation
+    return overlapwithzero(dnum) # expectation
 end
 
 
@@ -33,15 +33,15 @@ function hybridPP(nq, nl, W, min_abs_coeff, max_freq)
 
     topo = bricklayertopology(nq; periodic=false)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
-    fastcirc = tofastgates(circ)
-    m = countparameters(fastcirc)
+
+    m = countparameters(circ)
 
     Random.seed!(42)
     thetas = randn(m)
 
-    dhyb = mergingbfs(fastcirc, obsint, NumericPathProperties(1.0), thetas; max_weight=W, max_freq=max_freq, min_abs_coeff=min_abs_coeff)
+    dhyb = mergingbfs(circ, obsint, NumericPathProperties(1.0), thetas; max_weight=W, max_freq=max_freq, min_abs_coeff=min_abs_coeff)
 
-    return evalagainstzero(dhyb)
+    return overlapwithzero(dhyb)
 end
 
 
@@ -54,8 +54,8 @@ function surrogatePP(nq, nl, W, max_freq)
 
     topo = bricklayertopology(nq; periodic=false)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
-    fastcirc = tofastgates(circ)
-    m = countparameters(fastcirc)
+
+    m = countparameters(circ)
 
     Random.seed!(42)
     thetas = randn(m)
