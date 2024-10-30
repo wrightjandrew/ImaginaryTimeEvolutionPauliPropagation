@@ -84,7 +84,7 @@ function getcoeff(psum::PauliSum{OpType,CoeffType}, operator::Integer) where {Op
 end
 
 function getcoeff(psum::PauliSum{OpType,CoeffType1}, pstr::PauliString{OpType,CoeffType2}) where {OpType,CoeffType1,CoeffType2}
-    return get(psum.op_dict, pstr.operator, CoeffType(0))
+    return get(psum.op_dict, pstr.operator, CoeffType1(0))
 end
 
 function getcoeff(psum::PauliSum{OpType,CoeffType}, operator::Symbol, qind::Int) where {OpType,CoeffType}
