@@ -4,7 +4,6 @@ using Random
 
 @testset "PauliPropagation.jl" begin
     # Write your tests here.
-    # TODO(YT): remove these tests below --> test_pauligates.jl
     include("test_apply.jl")
     th = randn()
     @test all(applypauligate([:Z], [1], th) .== (0x0003, 1.0))
@@ -28,9 +27,7 @@ using Random
     include("test_noisechannels.jl")
     @test paulinoise(8, 4, Inf, 0.0)
 
-    include("test_gates.jl")
-
-    include("test_pauligates.jl")
+    include("test_gate.jl")
 
     include("test_paulioperations.jl")
 
