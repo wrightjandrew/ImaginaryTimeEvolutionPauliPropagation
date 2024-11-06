@@ -50,6 +50,8 @@ end
 
 PauliSum(nq::Int) = PauliSum(nq, Dict{getinttype(nq),Float64}())
 
+PauliSum(nq::Int, ELTYPE::T) where {T<:DataType} = PauliSum(nq, Dict{getinttype(nq),ELTYPE}())
+
 function PauliSum(nq::Int, sym_dict::Dict{Vector{Symbol},CoeffType}) where {CoeffType}
     """
     Construct a PauliSum from a dictionary of {symbols, coefficients}
