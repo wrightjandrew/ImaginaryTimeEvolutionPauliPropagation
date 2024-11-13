@@ -69,12 +69,12 @@ function applynoncummuting(gate::PauliGateUnion, operator, theta, coefficient=1.
     return operator, coeff1, new_oper, coeff2
 end
 
-function commutes(gate::PauliGateUnion, oper)
-    return sum(!commutes(gate_sym, getpaulielement(oper, qind)) for (qind, gate_sym) in zip(gate.qinds, gate.symbols)) % 2 == 0
+function commutes(gate::PauliGateUnion, pstr)
+    return sum(!commutes(gate_sym, getpauli(pstr, qind)) for (qind, gate_sym) in zip(gate.qinds, gate.symbols)) % 2 == 0
 end
 
-function commutes(gate::FastPauliGate, oper::Integer)
-    return commutes(gate.bitoperator, oper)
+function commutes(gate::FastPauliGate, pstr::PauliStringType)
+    return commutes(gate.bitoperator, pstr)
 end
 
 function applysin(old_coeff::Number, theta; sign=1, kwargs...)
@@ -102,14 +102,14 @@ function applycos(path_properties::PathProperties, theta; sign=1, kwargs...)
 end
 
 
-function getnewoperator(gate::PauliGate, oper)
-    new_oper = copy(oper)
+function getnewoperator(gate::PauliGate, pstr)
+    new_oper = copy(pstr)
 
     total_sign = 1  # this coefficient will be imaginary
     for (qind, gate_sym) in zip(gate.qinds, gate.symbols)
-        sign, new_partial_op = pauliprod(gate_sym, getpaulielement(new_oper, qind))
+        sign, new_partial_op = pauliprod(gate_sym, getpauli(new_oper, qind))
         total_sign *= sign
-        new_oper = setpaulielement!(new_oper, qind, new_partial_op)
+        new_oper = setpauli(new_oper, new_partial_op, qind)
     end
     return real(1im * total_sign), new_oper
 end

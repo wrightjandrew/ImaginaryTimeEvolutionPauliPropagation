@@ -90,14 +90,14 @@ end
 function _extractlookupop(operator, qinds)
     lookup_op = typeof(operator)(0)
     for ii in eachindex(qinds)
-        lookup_op = setpaulielement!(lookup_op, ii, getpaulielement(operator, qinds[ii]))
+        lookup_op = setpauli(lookup_op, getpauli(operator, qinds[ii]), ii)
     end
     return lookup_op
 end
 
 function _insertnewop!(operator, new_op, qinds)
     for ii in eachindex(qinds)
-        operator = setpaulielement!(operator, qinds[ii], getpaulielement(new_op, ii))
+        operator = setpauli(operator, getpauli(new_op, ii), qinds[ii])
     end
     return operator
 end
