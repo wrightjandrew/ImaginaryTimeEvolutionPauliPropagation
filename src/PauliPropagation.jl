@@ -93,6 +93,13 @@ export
     evaluateagainstdict,
     getnumcoeff
 
+include("numericalcertificates.jl")
+export
+    estimateaverageerror,
+    estimateaverageerror!,
+    montecarlopropagation,
+    mcapply
+
 include("surrogate.jl")
 export
     NodePathProperties,
