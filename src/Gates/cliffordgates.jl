@@ -66,11 +66,15 @@ function createcliffordmap(gate_relations::Dict)
 end
 
 ### Applying Clifford gates
-function apply(gate::CliffordGate, operator, theta, coefficient) # TODO: write tests for this
+function apply(gate::CliffordGate, pstr::PauliString, args...)
+    return PauliString(pstr.nqubits, apply(gate, pstr.operator, pstr.coeff)...)
+end
+
+function apply(gate::CliffordGate, operator, theta, coefficient)
     return apply(gate, operator, coefficient)
 end
 
-function apply(gate::CliffordGate, operator, coefficient=1.0) # TODO: write tests for this
+function apply(gate::CliffordGate, operator, coefficient=1.0)
     map_array = default_clifford_map[gate.symbol]
     return applywithmap(gate, operator, coefficient, map_array)
 end

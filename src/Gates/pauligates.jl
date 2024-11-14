@@ -52,6 +52,16 @@ end
 
 
 ### Apply Pauli gates  
+# TODO: Implement an apply wrapper function for `PauliString` that works for every low-level apply function.
+# like function apply(gate::Gate, pstr::Paulistring, theta, coefficient) and loops over the outcomes to create `PauliString`s
+function apply(gate::PauliGateUnion, pstr::PauliString, theta)
+    if commutes(gate, pstr)
+        return pstr
+    else
+        pstr1, c1, pstr2, c2 = applynoncummuting(gate, pstr.operator, theta, pstr.coeff)
+        return PauliString(pstr.nqubits, pstr1, c1), PauliString(pstr.nqubits, pstr2, c2)
+    end
+end
 
 function apply(gate::PauliGateUnion, operator, theta, coefficient=1.0)
     if commutes(gate, operator)
@@ -67,6 +77,10 @@ function applynoncummuting(gate::PauliGateUnion, operator, theta, coefficient=1.
     coeff2 = applysin(coefficient, theta; sign=sign, kwargs...)
 
     return operator, coeff1, new_oper, coeff2
+end
+
+function commutes(gate::PauliGateUnion, pstr::PauliString)
+    return commutes(gate, pstr.operator)
 end
 
 function commutes(gate::PauliGateUnion, pstr)

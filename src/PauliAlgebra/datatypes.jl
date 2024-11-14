@@ -74,9 +74,16 @@ end
 """
     PauliSum(nqubits::Integer)
 
-Contructor for an empty `PauliSum` on `nqubits` qubits.
+Contructor for an empty `PauliSum` on `nqubits` qubits. Element type defaults for Float64.
 """
-PauliSum(nqubits::Integer) = PauliSum(nqubits, Dict{getinttype(nqubits),Float64}())
+PauliSum(nqubits::Integer) = PauliSum(nqubits, Float64)
+
+"""
+    PauliSum(nq::Int, ELTYPE::T) where {T<:DataType}
+
+Contructor for an empty `PauliSum` on `nqubits` qubits. Element type can be provided.
+"""
+PauliSum(nq::Int, ELTYPE::T) where {T<:DataType} = PauliSum(nq, Dict{getinttype(nq),ELTYPE}())
 
 """
     PauliSum(nqubits::Integer, psum::Dict{Vector{Symbol},CoeffType}) where {CoeffType}
