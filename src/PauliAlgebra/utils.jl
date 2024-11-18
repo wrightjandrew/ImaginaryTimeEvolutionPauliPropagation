@@ -1,61 +1,162 @@
+# Defines mapping of integers 0, 1, 2, 3 to symbols :I, :X, :Y, :Z
+const pauli_symbols::Vector{Symbol} = [:I, :X, :Y, :Z]
 
-const pauli_ops::Vector{Symbol} = [:I, :X, :Y, :Z]
+"""
+    symboltoint(pstr::Vector{Symbol})
 
-symboltoint(sym::Symbol) = findfirst(s -> s == sym, pauli_ops) - 1
-symboltoint(i::Integer) = i
-inttosymbol(int::Integer) = pauli_ops[int+1]
-inttosymbol(s::Symbol) = s
-
-function symboltoint(oper::Vector{Symbol})
-    nq = length(oper)
-    intoper = getinttype(nq)(0)
-    for (ii, symb) in enumerate(oper)
-        intoper = setelement!(intoper, ii, symboltoint(symb))
+Maps a vector of symbols to an integer Pauli string.
+"""
+function symboltoint(pstr::Vector{Symbol})
+    nqubits = length(pstr)
+    converted_pstr = getinttype(nqubits)(0)
+    for (qind, pauli) in enumerate(pstr)
+        converted_pstr = setpauli(converted_pstr, pauli, qind)
     end
-    return intoper
+    return converted_pstr
 end
 
-function inttosymbol(int::Integer, n_qubits::Integer)
-    symbs = [:I for _ in 1:n_qubits]
-    for ii in 1:n_qubits
-        symbs[ii] = inttosymbol(getelement(int, ii))
+"""
+    symboltoint(nqubits::Integer, pstr::Vector{Symbol}, qinds)
+
+Maps a vector of symbols acting on the indices `qinds` to an integer Pauli string. Other sites are set to the identity.
+`qinds` can be any iterable.
+"""
+function symboltoint(nqubits::Integer, pstr::Vector{Symbol}, qinds)
+    inttype = getinttype(nqubits)
+    converted_pstr = inttype(0)
+    for (qind, pauli) in zip(qinds, pstr)
+        converted_pstr = setpauli(converted_pstr, pauli, qind)
     end
-    return symbs
+    return converted_pstr
 end
 
+"""
+    symboltoint(nqubits::Integer, pauli::Symbol, qind::Integer)
 
-inttostring(op::Unsigned) = prod("$(inttosymbol(getelement(op, ii)))" for ii in 1:Int(bitsize(op) / 2))
-
-import Base.show
-function show(op::Integer)
-    println(inttostring(op))
-
+Maps a single symbol acting on the index `qind` to an integer Pauli string. Other sites are set to the identity.
+"""
+function symboltoint(nqubits::Integer, pauli::Symbol, qind::Integer)
+    inttype = getinttype(nqubits)
+    converted_pauli = inttype(0)
+    converted_pauli = setpauli(converted_pauli, pauli, qind)
+    return converted_pauli
 end
 
-function show(op::Integer, n::Int)
-    max_qubits_in_integer = round(Int, bitsize(typeof(op)) / 2)
-    nind = min(max_qubits_in_integer, n)
+"""
+    inttosymbol(pstr::PauliStringType, nqubits::Integer)
 
-    print_string = inttostring(op)[1:nind]
-    println(print_string)
-
+Maps an integer Pauli string to a vector of symbols.
+"""
+function inttosymbol(pstr::PauliStringType, nqubits::Integer)  # TODO: does the argument order need to change?
+    converted_pstr = [:I for _ in 1:nqubits]
+    for ii in 1:nqubits
+        converted_pstr[ii] = inttosymbol(getpauli(pstr, ii))
+    end
+    return converted_pstr
 end
 
+"""
+    symboltoint(pauli::Symbol)
 
-function show(d::Dict; max_lines=20)
-    show(d, Int(bitsize(first(d)[1]) / 2); max_lines=max_lines)
+Maps a single symbol to its corresponding integer representation.
+"""
+symboltoint(pauli::Symbol) = findfirst(s -> s == pauli, pauli_symbols) - 1
+symboltoint(pauli) = pauli
 
+"""
+    inttosymbol(pauli::PauliType)
+
+Maps an integer Pauli to its corresponding symbol.
+"""
+inttosymbol(pauli::PauliType) = pauli_symbols[pauli+1]
+inttosymbol(pauli) = pauli
+
+## get and set functions
+"""
+    getpauli(pstr::PauliString, index::Integer)
+
+Gets the Pauli on index `index` of a `PauliString` in the integer representation.
+"""
+function getpauli(pstr::PauliString, index::Integer)
+    return getpauli(pstr.operator, index)
 end
 
-function show(d::Dict, n::Int; max_lines=20)
-    header = "$(typeof(d)) with $(length(d)) entries:"
-    println(header)
-    for (ii, (op, coeff)) in enumerate(d)
+"""
+    getpauli(pstr::PauliStringType, index::Integer)
+
+Gets the Pauli on index `index` of an integer Pauli string.
+"""
+function getpauli(pstr::PauliStringType, index::Integer)
+    return _getpaulibits(pstr, index)
+end
+
+"""
+    setpauli(pstr::PauliString, target_pauli::T, index::Integer) where {T<:Union{Symbol,PauliType}}
+
+Sets the Pauli on index `index` of an integer `PauliString` to `target_pauli`. That Pauli can be provided as integer (0, 1, 2, 3) or as a symbol (:I, :X, :Y, :Z).
+"""
+function setpauli(pstr::PauliString, target_pauli::T, index::Integer) where {T<:Union{Symbol,PauliType}}
+    return PauliString(pstr.nqubits, setpauli(pstr.operator, target_pauli, index), str.coeff)
+end
+
+"""
+    setpauli(pstr::PauliStringType, target_pauli::PauliType, index::Integer)
+
+Sets the Pauli on index `index` of an integer Pauli string to `target_pauli`. That Pauli should be provided as integer (0, 1, 2, 3).
+"""
+function setpauli(pstr::PauliStringType, target_pauli::PauliType, index::Integer)
+    return _setpaulibits(pstr, target_pauli, index)
+end
+
+"""
+    setpauli(pstr::PauliStringType, target_pauli::PauliType, index::Integer)
+
+Sets the Pauli on index `index` of an integer Pauli string to `target_pauli`. That Pauli should be provided as a symbol (:I, :X, :Y, :Z).
+"""
+function setpauli(pstr::PauliStringType, target_pauli::Symbol, index::Integer)
+    # `symboltoint` to ensure we work with `PauliType`, i.e., integers
+    return setpauli(pstr, symboltoint(target_pauli), index)
+end
+
+## Helper functions for pretty printing
+"""
+Returns a string representation of an integer Pauli string.
+"""
+inttostring(pstr::PauliType, nqubits) = prod("$(inttosymbol(getpauli(pstr, ii)))" for ii in 1:nqubits)
+
+"""
+Pretty string function.
+"""
+function _getprettystr(psum::Dict, nqubits::Int; max_lines=20)
+    str = ""
+    header = length(psum) == 1 ? "1 Pauli term: \n" : "$(length(psum)) Pauli terms:\n"
+    str *= header
+
+    for (ii, (op, coeff)) in enumerate(psum)
         if ii > max_lines
-            println("  ⋮")
+            new_str = "  ⋮"
+            str *= new_str
             break
         end
-        println("  ", inttostring(op), " => ", coeff)
+        pauli_string = inttostring(op, nqubits)
+        if length(pauli_string) > 20
+            pauli_string = pauli_string[1:20] * "..."
+        end
+        if isa(coeff, Number)
+            coeff_str = round(coeff, sigdigits=5)
+        elseif isa(coeff, PathProperties)
+            if isa(coeff.coeff, Number)
+                coeff_str = "PathProperty($(round(coeff.coeff, sigdigits=5)))"
+            else
+                coeff_str = "PathProperty($(typeof(coeff.coeff)))"
+            end
+        else
+            coeff_str = "($(typeof(coeff)))"
+        end
+        new_str = " $(coeff_str) * $(pauli_string)\n"
+        str *= new_str
     end
+
+    return str
 
 end

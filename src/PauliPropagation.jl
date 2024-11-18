@@ -2,53 +2,113 @@ module PauliPropagation
 
 using Base.Threads
 
-include("datatypes.jl")
-export PathProperties, NumericPathProperties
+include("./PauliAlgebra/PauliAlgebra.jl")
+export
+    PauliSum,
+    PauliString,
+    getcoeff,
+    topaulistrings,
+    add,
+    add!,
+    subtract,
+    subtract!,
+    inttosymbol,
+    symboltoint,
+    inttostring,
+    getpauli,
+    setpauli,
+    show,
+    countweight,
+    countxy,
+    countyz,
+    containsXorY,
+    containsYorZ,
+    pauliprod,
+    commutes,
+    commutator
 
 
-include("gates.jl")
+include("pathproperties.jl")
+export
+    PathProperties,
+    NumericPathProperties,
+    wrapcoefficients
+
+include("Gates/Gates.jl")
 export
     Gate,
+    ParametrizedGate,
+    StaticGate,
     PauliGate,
     FastPauliGate,
-    StaticGate,
-    tofastgates
+    tofastgates,
+    apply,
+    applynoncummuting,
+    CliffordGate,
+    default_clifford_map,
+    reset_clifford_map!,
+    createcliffordmap,
+    applywithmap,
+    ParametrizedNoiseChannel,
+    PauliNoise,
+    DepolarizingNoise,
+    PauliXNoise,
+    PauliYNoise,
+    PauliZNoise,
+    AmplitudeDampingNoise
+
 
 include("circuits.jl")
 export
+    countparameters,
     bricklayertopology,
     get2dtopology,
     get2dstaircasetopology,
     hardwareefficientcircuit,
+    efficientsu2circuit,
     tfitrottercircuit,
     heisenbergtrottercircuit,
     su4ansatz,
     qcnnansatz,
     appendSU4!
 
-include("./PauliAlgebra/PauliAlgebra.jl")
-export
-    inttosymbol,
-    symboltoint,
-    inttostring,
-    getelement,
-    setelement!,
-    show,
-    containsXorY,
-    containsYorZ
-
-include("apply.jl")
-export apply, applynoncummuting  # What should I export here?
-
 include("truncations.jl")
+export
+    truncatedampingcoeff
 
 include("Propagation/Propagation.jl")
-export mergingbfs
+export
+    mergingbfs,
+    mergingbfs!,
+    applygatetoall!,
+    applygatetoone!
 
 include("stateoverlap.jl")
-export evalagainstzero, evalagainsinitial, zerofilter
+export
+    overlapbyorthogonality,
+    overlapwithzero,
+    overlapwithplus,
+    orthogonaltozero,
+    orthogonaltoplus,
+    filter,
+    zerofilter,
+    evaluateagainstdict,
+    getnumcoeff
+
+include("numericalcertificates.jl")
+export
+    estimateaverageerror,
+    estimateaverageerror!,
+    montecarlopropagation,
+    mcapply
 
 include("surrogate.jl")
-export operatortopathdict, PauliGateNode, gettraceevalorder, expectation, resetnodes
+export
+    NodePathProperties,
+    EvalEndNode,
+    PauliGateNode,
+    gettraceevalorder,
+    expectation,
+    resetnodes
 
 end
