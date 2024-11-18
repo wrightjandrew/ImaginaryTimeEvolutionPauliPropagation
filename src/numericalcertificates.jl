@@ -13,7 +13,7 @@ For `PauliGates`, the value should be the integration range of the parameters ar
 For other currently supported parametrized gates, potential splitting probabilities can be derived from the parameters (e.g., for `AmplitudeDampingNoise`). 
 We currently support no non-parametrized splitting gates. This may change in the future.
 
-An initial state overlap function `stateoverlapfunc` can be provided to calculate the overlap of the backpropagated Pauli operators with the initial state.
+An initial state overlap function `stateoverlapfunc` can be provided to calculate the overlap of the backpropagated Pauli strings with the initial state.
 Importantly, the `kwargs` can be used to set the truncation parameters of the Pauli propagation. Currently supported are `max_weight`, `max_freq`, and `max_sins`.
 Note that `min_abs_coeff` is not supported here, as we consider errors integrated over the angles. `max_freq` effectively truncates small coefficients below (1/2)^`max_freq` on average over `thetas ∈ [-π, π]`.
 """
@@ -164,7 +164,7 @@ function mcapply(gate::PauliGateUnion, pauli, coeff, theta, split_prob=0.5; kwar
         # if the gate does not commute with the operator, remain with probability `split_prob` and split off with probability 1 - `split_prob`.
         if rand() > split_prob
             # branch into the new Pauli
-            sign, pauli = getnewoperator(gate, pauli) # TODO: This allocates
+            pauli, sign = getnewoperator(gate, pauli) # TODO: This allocates
             # for PathProperties: increment sin and frequency count
             _incrementsinandfreq!(coeff)
         else
