@@ -1,7 +1,8 @@
 # PauliPropagation.jl
 `PauliPropagation.jl` is a Julia package for Pauli propagation simulation of quantum circuits and quantum systems.
 
-This package is currently targeted at estimating expectation values, but many underlying data structures and functions may be used for other purposes involving Pauli operators. 
+The current focus of the package is to estimate quantities like $`Tr[\rho U^\dagger \hat{O} U]`$ where $`\hat{O}`$ is an observable sparse in Pauli basis, $`U`$ as a quantum circuit, and $`\rho`$ a quantum state.
+
 
 ## Installation
 
@@ -75,8 +76,16 @@ overlapwithzero(pauli_sum)
 # yields 0.154596728241...
 ```
 
+## Important Notes and Caveats
+All of the following points can be addressed by you writing the necessary missing code due to the nice extensibility of Julia.
+- The package is tested for Julia `1.10`.
+- The default is the Heisenberg _backpropagation_ (with Schrödinger propagation coming soon).
+- We currently do not support the strong simulation of quantum states in non-exponential time (even for Stabilizer states).
+- Sampling quantum states is currently not supported.
+- Many underlying data structures and functions can be used for other purposes involving Pauli operators.
+
 ## Upcoming Features
-This package is still work in progress. You will probably find certain features that you would like to have and that are currently missing.\
+This package is still work-in-progress. You will probably find certain features that you would like to have and that are currently missing.\
 Here are some features that we want to implement in the future. Feel free to contribute!
 - **A documentation website!**
 - **Easier Schrödinger picture propagation**. Currently, the default is Heisenberg and there is no easy way to transpose the gates.
@@ -84,6 +93,8 @@ Here are some features that we want to implement in the future. Feel free to con
 - **A fast and flexible Surrogate version**. Currently, we provide a version of the Pauli propagation Surrogate that is _good_ and _works_, at least for Pauli gates and Clifford gates. Stay tuned for a whole lot more.
 
 ## How to contribute
+We have a Slack channel `#pauli-propagation` in the [Julia Slack](https://join.slack.com/t/julialang/shared_invite/zt-2tyfzahid-QwVkpO13UA~9hyffV7UYMg).
+
 If something bothers you or you want to propose an enhancement, please open an [Issue](https://github.com/MSRudolph/PauliPropagation.jl/issues) describing everything in detail.
 
 For a concrete change of code, please fork this GitHub repository and submit a [Pull Request](https://github.com/MSRudolph/PauliPropagation.jl/pulls).
