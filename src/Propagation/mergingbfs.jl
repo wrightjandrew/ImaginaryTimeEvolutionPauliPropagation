@@ -80,7 +80,7 @@ function mergingapply(gate, operator_dict::Dict, new_operator_dict::Dict, thetas
 
     checktruncationonall!(operator_dict; kwargs...)
 
-    if isa(gate, ParametrizedGate)  # decrement parameter index by one
+    if isa(gate, ParametrizedGate) && param_idx > 1  # decrement parameter index by one if it is not the last parameter
         param_idx -= 1
     end
 
@@ -230,14 +230,14 @@ end
 
 ### TRUNCATE
 """
-    checktruncationonall!(operator_dict; max_weight::Real=Inf, min_abs_coeff=0.0, max_freq::Real=Inf, max_sins::Real=Inf, kwargs...)
+    checktruncationonall!(operator_dict; max_weight::Real=Inf, min_abs_coeff=1e-10, max_freq::Real=Inf, max_sins::Real=Inf, kwargs...)
 
 Check truncation conditions on all operators in `operator_dict` and remove them if they are truncated.
 This function supports the default truncations based on `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
 A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
 """
 function checktruncationonall!(
-    operator_dict; max_weight::Real=Inf, min_abs_coeff=0.0, max_freq::Real=Inf,
+    operator_dict; max_weight::Real=Inf, min_abs_coeff=1e-10, max_freq::Real=Inf,
     max_sins::Real=Inf,
     kwargs...
 )
@@ -257,7 +257,7 @@ end
 """
     checktruncationonone!(
     operator_dict, operator, coeff;
-    max_weight::Real=Inf, min_abs_coeff=0.0,
+    max_weight::Real=Inf, min_abs_coeff=1e-10,
     max_freq::Real=Inf, max_sins::Real=Inf,
     customtruncatefn=nothing,
     kwargs...
@@ -268,7 +268,7 @@ A custom truncation function can be passed as `customtruncatefn` with the signat
 """
 @inline function checktruncationonone!(
     operator_dict, operator, coeff;
-    max_weight::Real=Inf, min_abs_coeff=0.0,
+    max_weight::Real=Inf, min_abs_coeff=1e-10,
     max_freq::Real=Inf, max_sins::Real=Inf,
     customtruncatefn=nothing,
     kwargs...
