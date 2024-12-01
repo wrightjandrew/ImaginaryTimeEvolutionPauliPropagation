@@ -26,11 +26,11 @@ function PauliString(nqubits::Integer, pauli::Symbol, qind::Integer, coeff=1.0)
 end
 
 """
-    PauliString(nqubits, pstr::Vector{Symbol}, qinds::Vector{Int}, coeff=1.0)
+    PauliString(nqubits, pstr, qinds, coeff=1.0)
 
 Constructor for a `PauliString` on `nqubits` qubits from a list of Symbols representing non-identity Pauli operator on qubits `qinds` with coefficient `coeff`.
 """
-function PauliString(nqubits, pstr::Vector{Symbol}, qinds::Vector{Int}, coeff=1.0)
+function PauliString(nqubits, pstr, qinds, coeff=1.0)
     pauli = symboltoint(nqubits, pstr, qinds)
     coeff = _convertcoefficients(coeff)
     return PauliString(nqubits, pauli, coeff)
@@ -153,22 +153,22 @@ function getcoeff(psum::PauliSum{OpType,CoeffType}, pauli::Symbol, qind::Integer
 end
 
 """
-    getcoeff(psum::PauliSum{OpType,CoeffType}, pstr::Vector{Symbol}, qinds) where {OpType,CoeffType}
+    getcoeff(psum::PauliSum{OpType,CoeffType}, pstr, qinds) where {OpType,CoeffType}
 
-Get the coefficient of a Pauli string in a `PauliSum` by providing the Pauli string as a vector of Symbols acting on qubits `qinds`. 
+Get the coefficient of a Pauli string in a `PauliSum` by providing the Pauli string `pstr` as a vector of Symbols acting on qubits `qinds`. 
 This is consistent with how operators can be added to a `PauliSum` via `add!()`. Defaults to 0 if the operator is not in the `PauliSum`.
 """
-function getcoeff(psum::PauliSum{OpType,CoeffType}, pstr::Vector{Symbol}, qinds) where {OpType,CoeffType}
+function getcoeff(psum::PauliSum{OpType,CoeffType}, pstr, qinds) where {OpType,CoeffType}
     return getcoeff(psum, symboltoint(psum.nqubits, pstr, qinds))
 end
 
 """
-    getcoeff(psum::PauliSum{OpType,CoeffType}, pstr::Vector{Symbol}) where {OpType,CoeffType}
+    getcoeff(psum::PauliSum{OpType,CoeffType}, pstr) where {OpType,CoeffType}
 
-Get the coefficient of a Pauli string in a `PauliSum` by providing the Pauli string as a vector of Symbols acting on all qubits. 
+Get the coefficient of a Pauli string in a `PauliSum` by providing the Pauli string `pstr` as a vector of Symbols acting on all qubits. 
 This is consistent with how operators can be added to a `PauliSum` via `add!()`. Defaults to 0 if the operator is not in the `PauliSum`.
 """
-function getcoeff(psum::PauliSum{OpType,CoeffType}, pstr::Vector{Symbol}) where {OpType,CoeffType}
+function getcoeff(psum::PauliSum{OpType,CoeffType}, pstr) where {OpType,CoeffType}
     return getcoeff(psum, symboltoint(pstr))
 end
 
@@ -353,12 +353,12 @@ end
 # TODO: add! for PauliStringType with coefficient. Use these functions throughout mergingbfs
 
 """
-    add!(psum::PauliSum, pstr_vec::Vector{Symbol}, qinds::Vector{Int}, coeff=1.0)
+    add!(psum::PauliSum, pstr, qinds, coeff=1.0)
 
-In-place addition a Pauli string to `PauliSum` by providing the Pauli string as a vector of Symbols acting on qubits `qinds`.
+In-place addition a Pauli string to `PauliSum` by providing the Pauli string `pstr` as a vector of Symbols acting on qubits `qinds`.
 Coefficient defaults to 1.0.
 """
-function add!(psum::PauliSum, pstr::Vector{Symbol}, qinds::Vector{Int}, coeff=1.0) # TODO: don't strictly type qinds or similar here or elsewhere
+function add!(psum::PauliSum, pstr, qinds, coeff=1.0) # TODO: don't strictly type qinds or similar here or elsewhere
     return add!(psum, PauliString(psum.nqubits, pstr, qinds, coeff))
 end
 
@@ -473,7 +473,7 @@ end
 """
 Checks whether the number of qubits `nqubits` is the same between as the length of the vector `pstr`.
 """
-function _checknumberofqubits(nqubits::Int, pstr::Vector{Symbol})
+function _checknumberofqubits(nqubits::Int, pstr)
     if nqubits != length(pstr)
         throw(
             ArgumentError(
