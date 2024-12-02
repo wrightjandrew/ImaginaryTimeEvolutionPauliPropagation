@@ -126,6 +126,7 @@ function wrapcoefficients(psum::PauliSum)
     return wrapcoefficients(psum, NumericPathProperties)
 end
 
+# TODO: This is not type stable
 """
     wrapcoefficients(psum::PauliSum, PathPropertiesType::Type{PP}) where {PP<:PathProperties}
 
