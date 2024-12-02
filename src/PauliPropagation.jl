@@ -1,7 +1,6 @@
 module PauliPropagation
 
 using Base.Threads
-using ThreadsX
 
 include("./PauliAlgebra/PauliAlgebra.jl")
 export

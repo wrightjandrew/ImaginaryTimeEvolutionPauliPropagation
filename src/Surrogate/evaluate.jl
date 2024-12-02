@@ -1,5 +1,5 @@
 """
-    evaluate(eval_list::Vector{<:CircuitNode}, thetas)
+    evaluate!(eval_list::Vector{<:CircuitNode}, thetas)
 
 Evaluate the expectation value of a Surrogate by evaluating all involved circuit nodes in the correct order.
 `eval_list` can be attained as the output of `gettraceevalorder()`
@@ -12,8 +12,50 @@ function evaluate!(psum::PauliSum{OpType,NodePathProperties}, thetas) where {OpT
     return psum
 end
 
+
+## Reset functions
 """
-    traceevalorder(node::PauliGateNode, thetas; eval_list=nothing)
+    reset!(psum::PauliSum{PauliStringType, NodePathProperties})
+
+Reset the nodes in a the Surrogate. Needs to be done in-between evaluatios with different parameters.
+"""
+function reset!(psum::PauliSum{OpType,CoeffType}) where {OpType<:PauliStringType,CoeffType<:NodePathProperties}
+    @sync for (_, pth) in psum
+        @spawn reset!(pth.coeff)
+    end
+    return
+end
+
+"""
+    reset!(circuit_node::CircuitNode)
+
+Reset a `CircuitNode` in a the Surrogate. Needs to be done in-between evaluatios with different parameters.
+"""
+function reset!(circuit_node::CircuitNode)
+    if circuit_node.is_evaluated
+        circuit_node.is_evaluated = false
+        setcummulativevalue(circuit_node, 0.0)
+
+        for parent_node in circuit_node.parents
+            reset!(parent_node)
+        end
+    end
+end
+
+"""
+    reset!(end_node::EvalEndNode)
+
+Reset a `EvalEndNode` in a the Surrogate. Needs to be done in-between evaluatios with different parameters.
+"""
+function reset!(end_node::EvalEndNode)
+    end_node.is_evaluated = false
+    setcummulativevalue(end_node, 0.0)
+    return
+end
+
+## Evaluation functions
+"""
+    _traceevalorder(node::PauliGateNode, thetas; eval_list=nothing)
 
 Evaluate the coefficient of `node` on the Surrogate by recursively evaluating all parents.
 `thetas` are the parameters of the circuit.
@@ -47,7 +89,7 @@ function _traceevalorder(node::PauliGateNode, thetas; eval_list=nothing)
 end
 
 """
-    traceevalorder(node::EvalEndNode, thetas; eval_list=nothing)
+    _traceevalorder(node::EvalEndNode, thetas; eval_list=nothing)
 
 Evaluates the observable's coefficient. 
 This function likely does not need to be called manually.
@@ -62,40 +104,13 @@ function _traceevalorder(node::EvalEndNode, thetas; eval_list=nothing)
 end
 
 """
-    traceevalorder(nodes::Vector{<:CircuitNode}, thetas)
+    _traceevalorder(nodes::Vector{<:CircuitNode}, thetas)
 
 Evaluate the sum of coefficients of a vector of `CircuitNode` on the Surrogate. 
 This will be evaluated in parallel with recursive evaluation of the parents. 
 NOTE: This requires calling `resetnodes` in-between evaluations with different `thetas`.
 """
-_traceevalorder(nodes::Vector{<:CircuitNode}, thetas) = ThreadsX.sum(_traceevalorder(node, thetas) for node in nodes)
-
-## Reset functions
-function reset!(psum::PauliSum{OpType,CoeffType}) where {OpType<:PauliStringType,CoeffType<:NodePathProperties}
-    @sync for (_, pth) in psum
-        @spawn reset!(pth.coeff)
-    end
-    return
-end
-
-function reset!(circuit_node::CircuitNode)
-    if circuit_node.is_evaluated
-        circuit_node.is_evaluated = false
-        setcummulativevalue(circuit_node, 0.0)
-
-        for parent_node in circuit_node.parents
-            reset!(parent_node)
-        end
-    end
-end
-
-function reset!(end_node::EvalEndNode)
-    end_node.is_evaluated = false
-    setcummulativevalue(end_node, 0.0)
-    return
-end
-
-# const trig_funcs = [x -> 1.0, cos, sin] 
+_traceevalorder(nodes::Vector{<:CircuitNode}, thetas) = sum(_traceevalorder(node, thetas) for node in nodes)
 
 function _evaltrig(which_idx, sign, thetas, param_idx)
     if which_idx == 1
@@ -105,7 +120,6 @@ function _evaltrig(which_idx, sign, thetas, param_idx)
     else
         return 1.0 * sign
     end
-    # return trig_funcs[which_idx+1](thetas[param_idx]) * sign
 end
 
 _evaltrig(node::CircuitNode, thetas, ii) = _evaltrig(node.trig_inds[ii], node.signs[ii], thetas, node.param_idx)
