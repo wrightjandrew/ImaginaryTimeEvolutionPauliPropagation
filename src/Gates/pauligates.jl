@@ -29,6 +29,15 @@ function PauliGate(symbols::Union{AbstractArray,Tuple,Base.Generator}, qinds::Un
 end
 
 """
+    PauliGate(symbols, qinds, theta)
+
+Constructor for a frozen `PauliGate` acting on the qubits `qinds` with the Pauli operators `symbols`, and with fixed parameter `theta`.
+"""
+function PauliGate(symbols, qinds, theta)
+    return FrozenGate(PauliGate(symbols, qinds), theta)
+end
+
+"""
     FastPauliGate(symbols::Vector{Symbol}, qinds::Vector{Int}, bitoperator::PauliStringType)
 
 A parametrized Pauli rotation gate acting on the qubits `qinds` with the Pauli operators `symbols`.
@@ -58,14 +67,6 @@ Union type for `PauliGate` and `FastPauliGate`.
 PauliGateUnion = Union{PauliGate,FastPauliGate}
 
 """
-    tofastgates(gate::Gate, nqubits::Integer)
-
-Transforms a gate to a potentially faster but more involved gate type. 
-This is currently only for `PauliGate` to `FastPauliGate`.
-"""
-tofastgates(gate::Gate, nqubits::Integer) = gate  # TODO: move this to a more general place
-
-"""
     tofastgates(pauli_gate::PauliGate, nqubits::Integer)
 
 Transforms a `PauliGate` to a `FastPauliGate` which carries the integer representation of the gate generator.
@@ -77,44 +78,6 @@ function tofastgates(pauli_gate::PauliGate, nqubits::Integer)
         base_pstr = setpauli(base_pstr, pauli, qind)
     end
     return FastPauliGate(pauli_gate.symbols, pauli_gate.qinds, base_pstr)
-end
-
-"""
-    tofastgates(circ::Vector{G}) where {G<:Gate}
-
-Transforms a circuit in the form of a vector of gates to a vector of potentially faster gates where applicable.
-"""
-function tofastgates(circ::Vector{G}) where {G<:Gate}
-    # Find the maximum number of qubits
-    nq = 1
-    for gate in circ
-        nq = max(nq, maximum(gate.qinds))
-    end
-
-    fast_circ = similar(circ)
-    for (ii, gate) in enumerate(circ)
-        fast_circ[ii] = tofastgates(gate, nq)
-    end
-    return fast_circ
-end
-
-"""
-    tofastgates!(circ::Vector{G}) where {G<:Gate}
-
-Transforms a circuit in the form of a vector of gates, converting gates in-place to potentially faster gates where applicable.
-"""
-function tofastgates!(circ::Vector{G}) where {G<:Gate}
-    # Find the maximum number of qubits
-    nq = 1
-    for gate in circ
-        nq = max(nq, maximum(gate.qinds))
-    end
-
-    # TODO: This could fail if circ is too concretely typed
-    for (ii, gate) in enumerate(circ)
-        circ[ii] = tofastgates(gate, nq)
-    end
-    return circ
 end
 
 
@@ -213,32 +176,53 @@ function applycos(old_coeff::Number, theta; sign=1, kwargs...)
     return old_coeff * cos(theta) * sign
 end
 
+# TODO: Simplify the following functions
 """
-    applysin(path_properties::PathProperties, theta; sign=1, kwargs...)
+    applysin(pth::PathProperties, theta; sign=1, kwargs...)
 
-Multiply sin(theta) * sign to the coefficient of a `PathProperties` object.
-Increments the `nsins` and `freq` fields by 1.
+Multiply sin(theta) * sign to the `coeff` field of a `PathProperties` object.
+Increments the `nsins` and `freq` fields by 1 if applicable.
 """
-function applysin(path_properties::PathProperties, theta; sign=1, kwargs...)
-    # path_properties = copy(path_properties) # copy not necessary. Was done in applycos.
-    _incrementsinandfreq!(path_properties)
+function applysin(pth::T, theta; sign=1, kwargs...) where {T<:PathProperties}
+    fields = fieldnames(T)
 
-    path_properties.coeff = applysin(path_properties.coeff, theta; sign, kwargs...)
-    return path_properties
+    @inline function updateval(val, field)
+        if field == :coeff
+            # apply sin to the `coeff` field
+            return applysin(val, theta; sign=sign, kwargs...)
+        elseif field == :nsins
+            return val + 1
+        elseif field == :freq
+            return val + 1
+        else
+            return val
+        end
+    end
+    return T((updateval(getfield(pth, field), field) for field in fields)...)
 end
 
 """
-    applycos(path_properties::PathProperties, theta; sign=1, kwargs...)
+    applycos(pth::PathProperties, theta; sign=1, kwargs...)
 
-Multiply cos(theta) * sign to the coefficient of a `PathProperties` object.
-Increments the `ncos` and `freq` fields by 1.
+Multiply cos(theta) * sign to the `coeff` field of a `PathProperties` object.
+Increments the `ncos` and `freq` fields by 1 if applicable.
 """
-function applycos(path_properties::PathProperties, theta; sign=1, kwargs...)
-    path_properties = copy(path_properties)
-    _incrementcosandfreq!(path_properties)
+function applycos(pth::T, theta; sign=1, kwargs...) where {T<:PathProperties}
+    fields = fieldnames(T)
 
-    path_properties.coeff = applycos(path_properties.coeff, theta; sign, kwargs...)
-    return path_properties
+    @inline function updateval(val, field)
+        if field == :coeff
+            # apply cos to the `coeff` field
+            return applycos(val, theta; sign=sign, kwargs...)
+        elseif field == :ncos
+            return val + 1
+        elseif field == :freq
+            return val + 1
+        else
+            return val
+        end
+    end
+    return T((updateval(getfield(pth, field), field) for field in fields)...)
 end
 
 """
@@ -271,22 +255,38 @@ function getnewoperator(gate::FastPauliGate, pstr::PauliStringType)
     return new_pstr, real(1im * sign)
 end
 
-function _incrementcosandfreq!(coeff)
-    return
+function _incrementcosandfreq(coeff)
+    return coeff
 end
 
-function _incrementsinandfreq!(coeff)
-    return
+function _incrementsinandfreq(coeff)
+    return coeff
 end
 
-function _incrementcosandfreq!(path_properties::PathProperties)
-    path_properties.ncos += 1
-    path_properties.freq += 1
-    return
+function _incrementcosandfreq(pth::T) where {T<:PathProperties}
+    fields = fieldnames(T)
+    @inline function updateval(val, field)
+        if field == :ncos
+            return val + 1
+        elseif field == :freq
+            return val + 1
+        else
+            return val
+        end
+    end
+    return T((updateval(getfield(pth, field), field) for field in fields)...)
 end
 
-function _incrementsinandfreq!(path_properties::PathProperties)
-    path_properties.nsins += 1
-    path_properties.freq += 1
-    return
+function _incrementsinandfreq(pth::T) where {T<:PathProperties}
+    fields = fieldnames(T)
+    @inline function updateval(val, field)
+        if field == :nsins
+            return val + 1
+        elseif field == :freq
+            return val + 1
+        else
+            return val
+        end
+    end
+    return T((updateval(getfield(pth, field), field) for field in fields)...)
 end

@@ -6,6 +6,11 @@ include("./PauliAlgebra/PauliAlgebra.jl")
 export
     PauliSum,
     PauliString,
+    paulis,
+    coefficients,
+    paulitype,
+    coefftype,
+    numcoefftype,
     getcoeff,
     topaulistrings,
     add,
@@ -25,7 +30,8 @@ export
     containsYorZ,
     pauliprod,
     commutes,
-    commutator
+    commutator,
+    getinttype
 
 
 include("pathproperties.jl")
@@ -45,17 +51,20 @@ export
     apply,
     applynoncummuting,
     CliffordGate,
-    default_clifford_map,
+    clifford_map,
     reset_clifford_map!,
     createcliffordmap,
     applywithmap,
     ParametrizedNoiseChannel,
     PauliNoise,
     DepolarizingNoise,
+    DephasingNoise,
     PauliXNoise,
     PauliYNoise,
     PauliZNoise,
-    AmplitudeDampingNoise
+    AmplitudeDampingNoise,
+    FrozenGate,
+    freeze
 
 
 include("circuits.jl")
@@ -78,10 +87,13 @@ export
 
 include("Propagation/Propagation.jl")
 export
-    mergingbfs,
-    mergingbfs!,
+    propagate,
+    propagate!,
+    mergingapply!,
     applygatetoall!,
-    applygatetoone!
+    applygatetoone!,
+    mergeandclear!,
+    merge
 
 include("stateoverlap.jl")
 export
@@ -90,8 +102,14 @@ export
     overlapwithplus,
     orthogonaltozero,
     orthogonaltoplus,
+    overlapwithpaulisum,
+    overlapwithmaxmixed,
     filter,
+    filter!,
     zerofilter,
+    zerofilter!,
+    plusfilter,
+    plusfilter!,
     evaluateagainstdict,
     getnumcoeff
 
@@ -102,13 +120,12 @@ export
     montecarlopropagation,
     mcapply
 
-include("surrogate.jl")
+include("Surrogate/Surrogate.jl")
 export
     NodePathProperties,
     EvalEndNode,
     PauliGateNode,
-    gettraceevalorder,
-    expectation,
-    resetnodes
+    evaluate!,
+    reset!
 
 end

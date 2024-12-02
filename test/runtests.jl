@@ -14,7 +14,7 @@ using Random
     @test all(applypauligate([:Y], [1], th) .≈ (0x0003, cos(th), 0x0001, -sin(th)))
 
 
-    include("test_mergingbfs.jl")
+    include("test_propagate.jl")
     @test numericalPP(8, 4, Inf, 0.0) ≈ 0.21720058439757214
     @test hybridPP(8, 4, Inf, 0.0, Inf) ≈ 0.21720058439757214
     @test surrogatePP(8, 4, Inf, Inf) ≈ 0.21720058439757214
@@ -27,8 +27,11 @@ using Random
     Random.seed!(42)
     include("test_noisechannels.jl")
     @test paulinoise(8, 4, Inf, 0.0)
+    @test dephasingnoise(17, 3, Inf, 0.0)
 
     include("test_cliffordgates.jl")
+
+    include("test_frozengates.jl")
 
     include("test_pauligates.jl")
 
