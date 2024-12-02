@@ -75,6 +75,25 @@ Pretty print for NumericPathProperties
 """
 Base.show(io::IO, pth::NumericPathProperties) = print(io, "NumericPathProperties($(pth.coeff), nsins=$(pth.nsins), ncos=$(pth.ncos), freq=$(pth.freq))")
 
+
+"""
+    numcoefftype(pth::PathProperties)
+
+Return the type of the coefficient in a `PathProperties` object.
+"""
+function numcoefftype(pth::PathProperties)
+    return typeof(pth.coeff)
+end
+
+"""
+    getnumcoeff(val::PathProperties)
+
+Get the numerical coefficient of a `PathProperties` wrapper.
+"""
+function getnumcoeff(val::PathProperties)
+    return val.coeff
+end
+
 """
     wrapcoefficients(pstr::PauliString)
 

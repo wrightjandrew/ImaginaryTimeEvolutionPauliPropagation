@@ -7,6 +7,11 @@ include("./PauliAlgebra/PauliAlgebra.jl")
 export
     PauliSum,
     PauliString,
+    paulis,
+    coefficients,
+    paulitype,
+    coefftype,
+    numcoefftype,
     getcoeff,
     topaulistrings,
     add,
