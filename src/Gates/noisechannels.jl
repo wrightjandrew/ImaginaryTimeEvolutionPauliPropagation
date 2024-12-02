@@ -21,6 +21,16 @@ struct DepolarizingNoise <: PauliNoise
 end
 
 """
+    DepolarizingNoise(qind::Int, p::Real)
+
+A frozen depolarizing noise channel acting on the qubit at index `qind` with noise strength `p`.
+Will damp X, Y, and Z Paulis equally.
+"""
+function DepolarizingNoise(qind::Int, p::Real)
+    return FrozenGate(DepolarizingNoise(qind), p)
+end
+
+"""
     apply(gate::DepolarizingNoise, pstr::PauliStringType, p, coefficient=1.0)
 
 Apply a depolarizing noise channel to an integer Pauli string `pstr` with noise strength `p`.
@@ -75,6 +85,16 @@ struct PauliXNoise <: PauliNoise
 end
 
 """
+    PauliXNoise(qind::Int, p::Real)
+
+A frozen Pauli-X noise channel acting on the qubit at index `qind` with noise strength `p`.
+Will damp X Paulis.
+"""
+function PauliXNoise(qind::Int, p::Real)
+    return FrozenGate(PauliXNoise(qind), p)
+end
+
+"""
     apply(gate::PauliXNoise, pstr::PauliStringType, p, coefficient=1.0)
 
 Apply a Pauli-X noise channel to an integer Pauli string `pstr` with noise strength `p`.
@@ -98,6 +118,16 @@ Will damp Y Paulis.
 """
 struct PauliYNoise <: PauliNoise
     qind::Int
+end
+
+"""
+    PauliYNoise(qind::Int, p::Real)
+
+A frozen Pauli-Y noise channel acting on the qubit at index `qind` with noise strength `p`.
+Will damp Y Paulis.
+"""
+function PauliYNoise(qind::Int, p::Real)
+    return FrozenGate(PauliYNoise(qind), p)
 end
 
 """
@@ -127,6 +157,16 @@ struct PauliZNoise <: PauliNoise
 end
 
 """
+    PauliZNoise(qind::Int, p::Real)
+
+A frozen Pauli-Z noise channel acting on the qubit at index `qind` with noise strength `p`.
+Will damp Z Paulis.
+"""
+function PauliZNoise(qind::Int, p::Real)
+    return FrozenGate(PauliZNoise(qind), p)
+end
+
+"""
     apply(gate::PauliZNoise, pstr::PauliStringType, p, coefficient=1.0)
 
 Apply a Pauli-Z noise channel to an integer Pauli string `pstr` with noise strength `p`.
@@ -150,6 +190,16 @@ Damps X and Y Paulis, and splits Z into and I and Z component (in the transposed
 """
 struct AmplitudeDampingNoise <: ParametrizedGate
     qind::Int
+end
+
+"""
+    AmplitudeDampingNoise(qind::Int, gamma::Real)
+
+A frozen amplitude damping noise channel acting on the qubit at index `qind` with noise strength `gamma`.
+Damps X and Y Paulis, and splits Z into and I and Z component (in the transposed Heisenberg picture).
+"""
+function AmplitudeDampingNoise(qind::Int, gamma::Real)
+    return FrozenGate(AmplitudeDampingNoise(qind), gamma)
 end
 
 """

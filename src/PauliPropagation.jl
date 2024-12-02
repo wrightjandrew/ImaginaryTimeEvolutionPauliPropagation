@@ -63,7 +63,9 @@ export
     PauliXNoise,
     PauliYNoise,
     PauliZNoise,
-    AmplitudeDampingNoise
+    AmplitudeDampingNoise,
+    FrozenGate,
+    freeze
 
 
 include("circuits.jl")
