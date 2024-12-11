@@ -6,7 +6,7 @@
 
 using Test
 
-test_cases = [
+const test_cases = [
     "twoZs" => (4, (2, 4), 1.0),
     "oneZ" => (5, (2), -1.0),
     "noZ" => (4, (3), 1.0),
@@ -36,10 +36,10 @@ test_cases = [
 
             # SubTest the case where the PauliString contains an X/Y operator
             pstr = PauliString(nq, [:X, :Z, :Z], [1, 2, 4])
-            @test overlapwithcomputational(pstr, indices) == 0.
+            @test overlapwithcomputational(pstr, indices) == 0.0
 
             pstr = PauliString(nq, [:Y], [4])
-            @test overlapwithcomputational(pstr, indices) == 0.
+            @test overlapwithcomputational(pstr, indices) == 0.0
 
         end
     end
