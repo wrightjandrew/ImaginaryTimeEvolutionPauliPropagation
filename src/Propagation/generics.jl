@@ -67,6 +67,8 @@ function propagate!(circ, psum::Dict, thetas; kwargs...)
     return psum
 end
 
+# TODO: somehow propagate is not type stable
+
 """
     mergingapply!(gate, psum, second_psum, thetas, param_idx, args...; kwargs...)
 
@@ -102,8 +104,8 @@ function applygatetoall!(gate, theta, psum, second_psum, args...; kwargs...)
     for (pstr, coeff) in psum
         applygatetoone!(gate, pstr, coeff, theta, psum, second_psum; kwargs...)
     end
-
-    empty!(psum)  # empty old dict because next generation of Pauli strings should by default stored in second_psum (unless this is overwritten by a custom function)
+    # TODO: This should not be the default behavior. Absorb more logic into `mergeandclear!`, perhaps.
+    empty!(psum)  # empty old dict because next generation of operators should by default stored in second_psum (unless this is overwritten by a custom function)
 
     return second_psum, psum  # swap dicts around
 end
@@ -122,6 +124,7 @@ E.g., a Pauli gate returns 1 or 2 (pstr, coefficient) outputs.
 
     for ii in 1:2:length(pstrs_and_coeffs)
         pstr, coeff = pstrs_and_coeffs[ii], pstrs_and_coeffs[ii+1]
+        # TODO the zero should be of the same type as the coefficient
         second_psum[pstrs_and_coeffs[ii]] = get(second_psum, pstr, 0.0) + coeff
     end
 
