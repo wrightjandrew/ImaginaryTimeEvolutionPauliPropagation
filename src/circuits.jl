@@ -352,14 +352,14 @@ function trottercircuitandparams(commutinggroups::Vector{PauliSum{A,B}}, order::
         for group in reordering
             for (str, coeff) in group
                 paulis, inds = getpaulisandinds(str)
-                gate = PauliGate(paulis, inds) ################################## MUST UPDATE
+                gate = PauliRotation(paulis, inds)
                 push!(circuit, gate)
                 push!(params, coeff)
             end
         end
     end
 
-    # cast all PauliGate to FastPauliGate
+    # cast all PauliRotation to PauliRotation
     tofastgates!(circuit)
     return (circuit, params)
 end
