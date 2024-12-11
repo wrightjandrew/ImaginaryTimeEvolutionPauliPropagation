@@ -86,30 +86,30 @@ orthogonaltoplus(pstr) = containsYorZ(pstr)
 # eval against |±i> not implemented
 
 """
-    overlapwithones(psum::PauliSum, indices)
+    overlapwithcomputational(psum::PauliSum, onebitinds)
 
 Calculates the overlap of a Pauli sum with the computational basis state which has one-bits at all specified `indices` and zero-bits elsewhere.
-For example, `overlapwithones(psum, [1,2,4])` returns the overlap with `|1101000...>`
+For example, `overlapwithcomputational(psum, [1,2,4])` returns the overlap with `|1101000...>`
 """
-function overlapwithones(psum::PauliSum, indices)
+function overlapwithcomputational(psum::PauliSum, onebitinds)
     val = numcoefftype(psum)(0)
     for (pstr, coeff) in psum
-        val += getnumcoeff(coeff) * factorwithones(pstr, indices)
+        val += getnumcoeff(coeff) * _calcsignwithones(pstr, onebitinds)
     end
     return val
 end
 
 """
-    overlapwithones(pstr::PauliString, indices)
+    overlapwithcomputational(pstr::PauliString, onebitinds)
 
-Calculates the overlap of a Pauli string with the computational basis state which has one-bits at all specified `indices` and zero-bits elsewhere.
-For example, `overlapwithones(pstr, [1,2,4])` returns the overlap with `|1101000...>` and will be either zero or plus/minus `pstr.coeff`.
+Calculates the overlap of a Pauli string with the computational basis state which has one-bits at all specified `onebitinds` and zero-bits elsewhere.
+For example, `overlapwithcomputational(pstr, [1,2,4])` returns the overlap with `|1101000...>` and will be either zero or plus/minus `pstr.coeff`.
 """
-function overlapwithones(pstr::PauliString, indices)
-    return factorwithones(pstr.term, indices) * getnumcoeff(pstr.coeff)
+function overlapwithcomputational(pstr::PauliString, onebitinds)
+    return _calcsignwithones(pstr.term, onebitinds) * getnumcoeff(pstr.coeff)
 end
 
-function factorwithones(pstr::PauliStringType, indices)
+function _calcsignwithones(pstr::PauliStringType, onebitinds)
 
     # factor is zero unless pstr is entirely I and Z
     if containsXorY(pstr)
@@ -117,7 +117,7 @@ function factorwithones(pstr::PauliStringType, indices)
     end
 
     # factor is +-1 per the parity of pstr's Z=3 values at the bit=1 indices
-    return (-1) ^ count(i -> getpauli(pstr,i) == 3, indices) 
+    return (-1) ^ count(i -> getpauli(pstr,i) == 3, onebitinds)
 end
 
 """

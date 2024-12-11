@@ -1,7 +1,7 @@
 # Test File for stateoverlap.jl
 # 
 # This file contains unit tests for the following functionalities:
-# - Edge cases for overlapwithones.
+# - Edge cases for overlapwithcomputational.
 # - TODO(YT): add tests for other functions in stateoverlap.jl
 
 using Test
@@ -20,7 +20,7 @@ test_cases = [
 
             # SubTest the case where the PauliString is the identity
             pstr = PauliString(nq, :I, nq)
-            @test overlapwithones(pstr, indices) == 1.0
+            @test overlapwithcomputational(pstr, indices) == 1.0
 
         end
 
@@ -28,7 +28,7 @@ test_cases = [
 
             # SubTest the case where the PauliString is a Z operator
             pstr = PauliString(nq, [:Z, :Z], [2, 4])
-            @test overlapwithones(pstr, indices) == expected
+            @test overlapwithcomputational(pstr, indices) == expected
 
         end
 
@@ -36,10 +36,10 @@ test_cases = [
 
             # SubTest the case where the PauliString contains an X/Y operator
             pstr = PauliString(nq, [:X, :Z, :Z], [1, 2, 4])
-            @test overlapwithones(pstr, indices) == 0.
+            @test overlapwithcomputational(pstr, indices) == 0.
 
             pstr = PauliString(nq, [:Y], [4])
-            @test overlapwithones(pstr, indices) == 0.
+            @test overlapwithcomputational(pstr, indices) == 0.
 
         end
     end
