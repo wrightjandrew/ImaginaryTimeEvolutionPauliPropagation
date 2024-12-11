@@ -282,19 +282,31 @@ end
 
 import Random: shuffle
 """
-    trottercircuitandparams(hamil::PauliSum, order::Integer, nreps::Integer)
+    trottercircuitandparams(hamil::PauliSum, order::Integer, nreps::Integer; random=true)
 
 Create a circuit, and an accompanying list of gate parameters, which trotterises the unitary evolution operator (at time=1) of the given Hamiltonian.
-These are given by the higher-order (as per `order`) symmetrized Suzuki-Trotter decomposition, using Childs-randomisation of each repetition (as per `nreps`).
+These are given by the higher-order (as per `order`) symmetrized Suzuki-Trotter decomposition, using Childs-randomisation of each repetition (as per `nreps`), unless disabled by `random=false.`
 The specified `order` must be 1, or an even integer.
 This function returns tuple (circuit, params), where every gate in vector `circuit` is a FastPauliGate with corresponding angle given in `params`.
 Because time appears as a simple prefactor of every PauliGate angle, simulating non-unity time involves merely scaling all `params` by the desired time.
 For example, `propagate(circuit, pstr, 0.5 * params)` would simulate real-time evolution to time=`0.5`. 
 """
-function trottercircuitandparams(hamil::PauliSum, order::Integer, nreps::Integer)
+function trottercircuitandparams(hamil::PauliSum, order::Integer, nreps::Integer; random=true)
 
-    # TODO
-    # update this function as per PauliGate -> PauliRotation rename
+    # move each term into a separate PauliSum to indicate lack of commutation
+    groups = [PauliSum(hamil.nqubits, Dict(str=>coeff)) for (str,coeff) in hamil]
+    return trottercircuitandparams(groups, order, nreps; random=random)
+end
+
+"""
+    trottercircuitandparams(commutinggroups::Vector{PauliSum}, order::Integer, nreps::Integer)
+
+Creates a Trotter circuit in an identical fashion to `trottercircuitandparams(PauliSum, ...)`, but where the terms within each `PauliSum` are mapped to contiguous gates.
+This enables specifying commuting groups of Pauli strings in a Hamiltonian, reducing the Trotter error.
+Each `PauliSum` within `commutinggroups` is assumed to contain Pauli strings which all commute with one another.
+As such, Trotterisation will not interweave the corresponding rotations of terms in distinct groups.  
+"""
+function trottercircuitandparams(commutinggroups::Vector{PauliSum{A,B}}, order::Integer, nreps::Integer; random=true) where {A,B}
 
     # validate inputs, just because it is easy to pass erroneous odd-order
     if (order < 1 || (order != 1 && order % 2 != 0))
@@ -303,10 +315,12 @@ function trottercircuitandparams(hamil::PauliSum, order::Integer, nreps::Integer
         throw(ArgumentError("Argument 'nreps' must be a positive integer."))
     end
 
-    # build two lists; gates and their corresponding params
-    terms = collect(hamil)
+    # we will build two lists; gates and their corresponding params...
     circuit::Vector{Gate} = []
     params::Vector{Number} = []
+
+    # which are informed by orderings of the non-commuting PauliSums
+    groups = [collect(group) for group in commutinggroups]
     
     # TODO:
     # below is not type-stable because this is merely circuit-preparation
@@ -317,28 +331,31 @@ function trottercircuitandparams(hamil::PauliSum, order::Integer, nreps::Integer
 
     # inner-function to Suzuki-symmetrize a Hamiltonian into (str,coeff) pairs,
     # as per Hatano et al arXiv:math-ph/0506007
-    function symmetrize(terms, phase, order)
+    function symmetrize(groups, phase, order)
         if (order == 1)
-            return [(str,coeff*phase) for (str,coeff) in terms]
+            return [[(str,coeff*phase) for (str,coeff) in group] for group in groups]
         elseif (order == 2)
-            terms = symmetrize(terms, phase/2, 1)
-            return [terms; reverse(terms)]
+            groups = symmetrize(groups, phase/2, 1)
+            return [groups; reverse(groups)]
         end
         factor = 1/(4 - 4^(1/(order-1)))
-        outer = symmetrize(terms, factor * phase, order-2)
-        inner = symmetrize(terms, (1 - 4*factor) * phase, order-2)
+        outer = symmetrize(groups, factor * phase, order-2)
+        inner = symmetrize(groups, (1 - 4*factor) * phase, order-2)
         return [outer; outer; inner; outer; outer]
     end
 
     # produce trotter circuit by repeatedly symmetrizing a random hamil order,
     # as per Childs et al, Quantum 3, 182 (2019)
     for _ in 1:nreps
-        pairs = symmetrize(shuffle(terms), 1/nreps, order)
-        for (str, coeff) in pairs
-            paulis, inds = getpaulisandinds(str)
-            gate = PauliGate(paulis, inds)
-            push!(circuit, gate)
-            push!(params, coeff)
+        groups = random ? shuffle(groups) : groups
+        reordering = symmetrize(groups, 1/nreps, order)
+        for group in reordering
+            for (str, coeff) in group
+                paulis, inds = getpaulisandinds(str)
+                gate = PauliGate(paulis, inds) ################################## MUST UPDATE
+                push!(circuit, gate)
+                push!(params, coeff)
+            end
         end
     end
 

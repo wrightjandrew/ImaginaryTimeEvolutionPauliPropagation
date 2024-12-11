@@ -98,7 +98,8 @@ function getpaulisandinds(pstr::PauliStringType)
     paulis::Vector{Symbol} = []
     indices::Vector{Int} = []
 
-    maxind = ndigits(pstr, base=2)
+    maxbit = (pstr==0) ? 0 : ndigits(pstr, base=2)
+    maxind = ceil(Int, maxbit / 2)
 
     for i in 1:maxind
         p = getpauli(pstr, i)
