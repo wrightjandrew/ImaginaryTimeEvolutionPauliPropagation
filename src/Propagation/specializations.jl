@@ -1,103 +1,137 @@
-## This file contains specialized functions for some of our gates. 
+###
+##
+# This file contains specialized functions for some of our gates.
+# We overload `applyandadd!()` to fix potential type-instabilities in `apply()` if the number of returned Pauli strings is not fixed.
+# We overload `applytoall!()` to reduce unnecessarily moving Pauli strings between `psum` and `aux_psum`.
+# This usually also fixes potential type-instabilities in `apply()`.
+# Both functions can be overloaded if needed.
+##
+###
 
 ### PAULI GATES
 """
-    applygatetoall!(gate::PauliRotationUnion, thetas, psum, second_psum, args...; kwargs...)
+    applytoall!(gate::PauliRotationUnion, theta, psum, aux_psum, args...; kwargs...)
 
-Overload of `applygatetoall!` for `PauliRotation` and `FastPauliRotation` gates.
-Both `psum` and `second_psum` contain Pauli strings which will be merged later.
+Overload of `applytoall!` for `PauliRotation` and `FastPauliRotation` gates. 
+It fixes the type-instability of the `apply()` function and reduces moving Pauli strings between `psum` and `aux_psum`.
+`psum` and `aux_psum` are merged later.
 """
-function applygatetoall!(gate::PauliRotationUnion, theta, psum, second_psum, args...; kwargs...)
-    # TODO: there is a lot of code duplication. Can we write a more general function?
+function applytoall!(gate::PauliRotationUnion, theta, psum, aux_psum, args...; kwargs...)
 
+    # loop over all Pauli strings and their coefficients in the Pauli sum
     for (pstr, coeff) in psum
-        applygatetoone!(gate, pstr, coeff, theta, psum, second_psum; kwargs...)
+
+        if commutes(gate, pstr)
+            # if the gate commutes with the pauli string, do nothing
+            continue
+        end
+
+        # else we know the gate will split th Pauli string into two
+        pstr, coeff1, new_pstr, coeff2 = applynoncummuting(gate, pstr, theta, coeff; kwargs...)
+
+        # set the coefficient of the original Pauli string
+        set!(psum, pstr, coeff1)
+
+        # set the coefficient of the new Pauli string in the aux_psum
+        # we can set the coefficient because PauliRotations create non-overlapping new Pauli strings
+        set!(aux_psum, new_pstr, coeff2)
     end
-
-    return psum, second_psum  # don't swap psums around
-end
-
-"""
-    applygatetoone!(gate::PauliRotationUnion, pstr, coefficient, theta, psum, second_psum, args...; kwargs...)
-
-Overload of `applygatetoone!` for `PauliRotation` and `FastPauliRotation` gates. 
-Checks for commutation of `gate` and `pstr`, and applies the gate to the Pauli string if they don't.
-"""
-@inline function applygatetoone!(gate::PauliRotationUnion, pstr, coefficient, theta, psum, second_psum, args...; kwargs...)
-
-    if commutes(gate, pstr)
-        return
-    end
-
-    pstr, coeff1, new_pstr, coeff2 = applynoncummuting(gate, pstr, theta, coefficient; kwargs...)
-
-    psum[pstr] = coeff1
-    second_psum[new_pstr] = coeff2
 
     return
 end
+
 
 ### Clifford gates
-
 """
-    applygatetoone!(gate::CliffordGate, pstr, coefficient, theta, psum, second_psum, args...; kwargs...)
+    applyandadd!(gate::CliffordGate, pstr, coeff, theta, output_psum, args...; kwargs...)
 
-Overload of `applygatetoone!` for `CliffordGate` gates.
-Simplified logic for readability.
+Overload of `applyandadd!` for `CliffordGate` gates.
+Use `set!()` instead of `add!()` because Clifford gates create non-overlapping Pauli strings.
+`applytoall!` does not need to be adapted.
 """
-@inline function applygatetoone!(gate::CliffordGate, pstr, coefficient, theta, psum, second_psum, args...; kwargs...)
+@inline function applyandadd!(gate::CliffordGate, pstr, coeff, theta, output_psum, args...; kwargs...)
 
-    new_pstr, coeff = apply(gate, pstr, theta, coefficient; kwargs...)
-    second_psum[new_pstr] = coeff
+    new_pstr, new_coeff = apply(gate, pstr, theta, coeff; kwargs...)
+    # we can set the coefficient because Cliffords create non-overlapping Pauli strings
+    set!(output_psum, new_pstr, new_coeff)
 
     return
 end
+
+
+### Pauli Noise
+"""
+    applytoall!(gate::PauliNoise, theta, psum, aux_psum, args...; kwargs...)
+
+Overload of `applytoall!` for `PauliNoise` gates. 
+It changes the coefficients in-place and does not require the `aux_psum`, which stays empty.
+"""
+function applytoall!(gate::PauliNoise, theta, psum, aux_psum, args...; kwargs...)
+
+    # loop over all Pauli strings and their coefficients in the Pauli sum
+    for (pstr, coeff) in psum
+        if getpauli(pstr, gate.qind) == 0
+            # Pauli is I, so the gate does not do anything
+            continue
+        end
+
+        # apply the Pauli noise, which will reduce the coefficient
+        pstr, new_coeff = apply(gate, pstr, theta, coeff; kwargs...)
+
+        # set the coefficient of the Pauli string in the psum to the new coefficient
+        set!(psum, pstr, new_coeff)
+    end
+
+    return
+end
+
 
 ### Amplitude Damping Noise
 """
-    applygatetoall!(gate::AmplitudeDampingNoise, thetas, psum, second_psum, args...; kwargs...)
+    applytoall!(gate::AmplitudeDampingNoise, theta, psum, aux_psum, args...; kwargs...)
 
-Overload of `applygatetoall!` for `AmplitudeDampingNoise` gates.
-Both `psum` and `second_psum` contain Pauli strings which will be merged later.
+Overload of `applytoall!` for `AmplitudeDampingNoise` gates. 
+It fixes the type-instability of the apply() function and reduces moving Pauli strings between psum and aux_psum.
+`psum` and `aux_psum` are merged later.
 """
-function applygatetoall!(gate::AmplitudeDampingNoise, theta, psum, second_psum, args...; kwargs...)
-    # TODO: there is a lot of code duplication. Can we write a more general function? 
+function applytoall!(gate::AmplitudeDampingNoise, theta, psum, aux_psum, args...; kwargs...)
 
+    # loop over all Pauli strings and their coefficients in the Pauli sum
     for (pstr, coeff) in psum
-        applygatetoone!(gate, pstr, coeff, theta, psum, second_psum; kwargs...)
+        pauli = getpauli(pstr, gate.qind)
+        if pauli == 0
+            # Pauli is I, so the gate does not do anything
+            continue
+        elseif pauli == 1 || pauli == 2
+            # Pauli is X or Y, so the gate will give a sqrt(1-gamma) prefactor
+            pstr, new_coeff = diagonalapply(gate, pstr, theta, coeff; kwargs...)
+            # set the coefficient of the Pauli string in the psum to the new coefficient
+            set!(psum, pstr, new_coeff)
+        else
+            # Pauli is Z, so the gate will split the Pauli string 
+
+            # else we know the gate will split th Pauli string into two
+            pstr, coeff1, new_pstr, coeff2 = splitapply(gate, pstr, theta, coeff; kwargs...)
+
+            # set the coefficient of the original Pauli string
+            set!(psum, pstr, coeff1)
+
+            # add the coefficient of the new Pauli string in the aux_psum
+            add!(aux_psum, new_pstr, coeff2)
+
+        end
     end
-
-    return psum, second_psum
-end
-
-"""
-    applygatetoone!(gate::AmplitudeDampingNoise, pstr, coefficient, theta, psum, second_psum, args...; kwargs...)
-
-Overload of `applygatetoone!` for `AmplitudeDampingNoise` gates.
-Checks for whether `gate` will cause splitting and has tailored logic.
-"""
-@inline function applygatetoone!(gate::AmplitudeDampingNoise, pstr, coefficient, theta, psum, second_psum, args...; kwargs...)
-
-    if actsdiagonally(gate, pstr)
-        pstr, coeff = diagonalapply(gate, pstr, theta, coefficient; kwargs...)
-        psum[pstr] = coeff
-        return
-    end
-
-    pstr, coeff1, new_pstr, coeff2 = splitapply(gate, pstr, theta, coefficient; kwargs...)
-
-    psum[pstr] = coeff1
-    second_psum[new_pstr] = coeff2
 
     return
 end
 
+
 ### Frozen Gates
 """
-    applygatetoall!(gate::FrozenGate, thetas, psum, second_psum, args...; kwargs...)
+    applytoall!(gate::FrozenGate, thetas, psum, aux_psum, args...; kwargs...)
 
-Overload of `applygatetoall!` for `FrozenGate`s. Re-directs to `applygatetoall!` for the wrapped `FrozenGate.gate`.
+Overload of `applytoall!` for `FrozenGate`s. Re-directs to `applytoall!` for the wrapped `FrozenGate.gate` with the frozen parameter.
 """
-function applygatetoall!(gate::FrozenGate, theta, psum, second_psum, args...; kwargs...)
-    return applygatetoall!(gate.gate, gate.parameter, psum, second_psum, args...; kwargs...)
+function applytoall!(gate::FrozenGate, theta, psum, aux_psum, args...; kwargs...)
+    return applytoall!(gate.gate, gate.parameter, psum, aux_psum, args...; kwargs...)
 end

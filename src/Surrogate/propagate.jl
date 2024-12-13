@@ -4,6 +4,7 @@
     propagate(circ, pstr::PauliString; kwargs...)
 
 Propagate a `PauliString` through the circuit `circ` in the Heisenberg picture. 
+This means that the circuit is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 `kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
 A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
 """
@@ -17,6 +18,7 @@ end
     propagate(circ, psum::PauliSum; kwargs...)
 
 Propagate a `PauliSum` through the circuit `circ` in the Heisenberg picture. 
+This means that the circuit is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 `kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
 A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
 """
@@ -31,6 +33,7 @@ end
     propagate!(circ, psum::PauliSum; kwargs...)
 
 Propagate a `PauliSum` through the circuit `circ` in the Heisenberg picture. 
+This means that the circuit is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 The input `psum` will be modified.
 `kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
 A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
@@ -49,16 +52,17 @@ end
     propagate!(circ, d::Dict{TermType,NodePathProperties}; kwargs...)
 
 Propagate a `Dict{PauliStringType,CoeffType}` through the circuit `circ` in the Heisenberg picture. 
+This means that the circuit is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 The input `psum` will be modified.
 `kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
 A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
 """
-function propagate!(circ, psum::Dict{TermType,NodePathProperties}; kwargs...) where {TermType<:PauliStringType}
+function propagate!(circ, psum::Dict{TT,NodePathProperties}; kwargs...) where {TT}
     thetas = Array{Float64}(undef, countparameters(circ))
 
     param_idx = length(thetas)
 
-    second_psum = typeof(psum)()  # pre-allocating somehow doesn't do anything
+    aux_psum = typeof(psum)()  # pre-allocating somehow doesn't do anything
 
     ## TODO:
     # - decide where to reverse the circuit
@@ -66,7 +70,7 @@ function propagate!(circ, psum::Dict{TermType,NodePathProperties}; kwargs...) wh
     # - more elegant param_idx incrementation
     for gate in reverse(circ)
         # add param_index as kwarg, which will descend into the apply function eventually
-        psum, second_psum, param_idx = mergingapply!(gate, psum, second_psum, thetas, param_idx; param_idx=param_idx, kwargs...)
+        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; param_idx=param_idx, kwargs...)
     end
     return psum
 end

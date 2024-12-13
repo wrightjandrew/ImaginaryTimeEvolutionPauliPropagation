@@ -18,6 +18,8 @@ export
     add!,
     subtract,
     subtract!,
+    set!,
+    empty!,
     inttosymbol,
     symboltoint,
     inttostring,
@@ -93,10 +95,10 @@ include("Propagation/Propagation.jl")
 export
     propagate,
     propagate!,
-    mergingapply!,
-    applygatetoall!,
-    applygatetoone!,
-    mergeandclear!,
+    applymergetruncate!,
+    applytoall!,
+    applyandadd!,
+    mergeandempty!,
     merge
 
 include("stateoverlap.jl")
@@ -117,7 +119,7 @@ export
     plusfilter,
     plusfilter!,
     evaluateagainstdict,
-    getnumcoeff
+    tonumber
 
 include("numericalcertificates.jl")
 export

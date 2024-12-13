@@ -21,7 +21,7 @@ If not orthogonal, then the overlap is the coefficient of the `PauliString`.
 This is particularly useful for overlaps with stabilizer states.
 """
 function overlapbyorthogonality(pstr::PauliString, orthogonalfunc::Function)
-    return !orthogonalfunc(pstr) * getnumcoeff(pstr.coeff)
+    return !orthogonalfunc(pstr) * tonumber(pstr.coeff)
 end
 
 """
@@ -36,7 +36,7 @@ function overlapbyorthogonality(psum::Dict, orthogonalfunc::Function)
     val = numcoefftype(psum)(0)
     for (pstr, coeff) in psum
         if overlapbyorthogonality(pstr, orthogonalfunc)
-            val += getnumcoeff(coeff)
+            val += tonumber(coeff)
         end
     end
     return val
@@ -134,9 +134,9 @@ end
 
 Calculates the overlap of a Pauli sum dict with the maximally mixed state 1/2^n I.
 """
-function overlapwithmaxmixed(psum::Dict{TermType,CoeffType}) where {TermType<:PauliStringType,CoeffType}
+function overlapwithmaxmixed(psum::Dict{TT,CT}) where {TT,CT}
     NumType = numcoefftype(psum)
-    return get(psum, TermType(0), NumType(0.0))
+    return get(psum, TT(0), NumType(0.0))
 end
 
 """
@@ -153,7 +153,7 @@ end
 
 Calculates the overlap between two Pauli sum dicts.
 """
-function overlapwithpaulisum(psum1::Dict{TermType,CoeffType}, psum2::Dict{TermType,CoeffType}) where {TermType,CoeffType}
+function overlapwithpaulisum(psum1::Dict{TT,CT}, psum2::Dict{TT,CT}) where {TT,CT}
     NumberType = numcoefftype(psum1)
 
     val = NumberType(0.0)
@@ -168,7 +168,7 @@ function overlapwithpaulisum(psum1::Dict{TermType,CoeffType}, psum2::Dict{TermTy
 
     # looping over d2 (default initstate_dict) because we know that this one is sparser
     for pstr in keys(shorter_psum)
-        val += getnumcoeff(get(longer_psum, pstr, NumberType(0.0))) * getnumcoeff(get(shorter_psum, pstr, NumberType(0.0)))
+        val += tonumber(get(longer_psum, pstr, NumberType(0.0))) * tonumber(get(shorter_psum, pstr, NumberType(0.0)))
     end
     return val
 end
