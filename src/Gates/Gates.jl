@@ -9,7 +9,7 @@ Abstract type for parametrized gates.
 abstract type ParametrizedGate <: Gate end
 
 """
-Abstract type for static gates are not parametrized.
+Abstract type for static gates that are not parametrized.
 """
 abstract type StaticGate <: Gate end
 
@@ -19,5 +19,3 @@ include("paulirotations.jl")
 include("cliffordgates.jl")
 include("noisechannels.jl")
 include("miscgates.jl")
-
-

@@ -44,6 +44,14 @@ const _default_clifford_map = Dict(
     ],
 )
 
+"""
+    clifford_map
+
+Global dictionary of Clifford gates and their action on Pauli strings.
+Currently supported Clifford gates are `:H`, `:X`, `:Y`, `:Z`, `:S`, `:CNOT`, `:ZZpihalf`, and `:SWAP`.
+If one indexes into the returned arrays with the integer that corresponds to the partial Pauli string,
+the returned tuple is `(sign, partial_pstr)` where `sign` is the sign change and `partial_pstr` is the new partial Pauli string.
+"""
 const clifford_map = deepcopy(_default_clifford_map)
 
 """

@@ -4,6 +4,8 @@ using Base.Threads
 
 include("./PauliAlgebra/PauliAlgebra.jl")
 export
+    PauliStringType,
+    PauliType,
     PauliSum,
     PauliString,
     term,
@@ -75,6 +77,7 @@ include("circuits.jl")
 export
     countparameters,
     bricklayertopology,
+    staircasetopology,
     get2dtopology,
     get2dstaircasetopology,
     hardwareefficientcircuit,
