@@ -389,8 +389,6 @@ function trottercircuitandparams(commutinggroups::Vector{PauliSum{A,B}}, order::
         end
     end
 
-    # cast all PauliRotation to PauliRotation
-    tofastgates!(circuit)
     return (circuit, params)
 end
 
