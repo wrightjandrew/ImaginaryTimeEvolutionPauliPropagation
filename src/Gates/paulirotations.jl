@@ -38,46 +38,101 @@ function PauliRotation(symbols, qinds, theta)
 end
 
 """
-    FastPauliRotation(symbols::Vector{Symbol}, qinds::Vector{Int}, term::PauliStringType)
+    MaskedPauliRotation(symbols::Vector{Symbol}, qinds::Vector{Int}, term::PauliStringType)
 
 A parametrized Pauli rotation gate acting on the qubits `qinds` with the Pauli string `symbols`.
 The `term` is the integer representation of the Pauli string with the correct integer type for the total number of qubits.
 This allows for faster application of the gate.
-See `tofastgates` for conversion from `PauliRotation`, which is the easiest way to construct a `FastPauliRotation`.
+See `tomaskedpaulirotation` for conversion from `PauliRotation`, which is the easiest way to construct a `MaskedPauliRotation`.
 """
-struct FastPauliRotation{T} <: ParametrizedGate where {T<:PauliStringType}  # TODO rename
+struct MaskedPauliRotation{T} <: ParametrizedGate where {T<:PauliStringType}  # TODO rename
     symbols::Vector{Symbol}
     qinds::Vector{Int}
-    term::T
+    generator_mask::T
 end
 
 import Base.show
 """
-Pretty print for `FastPauliRotation`.
+Pretty print for `MaskedPauliRotation`.
 """
-function show(io::IO, gate::FastPauliRotation)
-    print(io, "FastPauliRotation{$(typeof(gate.term))}($(gate.symbols), $(gate.qinds))")
+function show(io::IO, gate::MaskedPauliRotation)
+    print(io, "MaskedPauliRotation{$(typeof(gate.generator_mask))}($(gate.symbols), $(gate.qinds))")
 end
 
 """
     PauliRotationUnion
 
-Union type for `PauliRotation` and `FastPauliRotation`, useful for functions which handle either agnostically.
+Union type for `PauliRotation` and `MaskedPauliRotation`, useful for functions which handle either agnostically.
 """
-PauliRotationUnion = Union{PauliRotation,FastPauliRotation}
+PauliRotationUnion = Union{PauliRotation,MaskedPauliRotation}
+
 
 """
-    tofastgates(pauli_gate::PauliRotation, nqubits::Integer)
+    _tomaskedpaulirotation(circ::Vector{Gate})
 
-Transforms a `PauliRotation` to a `FastPauliRotation` which carries the integer representation of the gate generator.
+Returns a circuit where `PauliRotation` gates are transformed to `MaskedPauliRotation` gates.
 This allows for significantly faster computation with the gate.
 """
-function tofastgates(pauli_gate::PauliRotation, nqubits::Integer)
-    base_pstr = getinttype(nqubits)(0)
-    for (qind, pauli) in zip(pauli_gate.qinds, pauli_gate.symbols)
-        base_pstr = setpauli(base_pstr, pauli, qind)
+function _tomaskedpaulirotation(circ::Vector{G}, nqubits::Integer) where {G<:Gate}
+    TT = getinttype(nqubits)
+    return _tomaskedpaulirotation(circ, TT)
+end
+
+"""
+    _tomaskedpaulirotation(circ::Vector{Gate})
+
+Returns a circuit where `PauliRotation` gates are transformed to `MaskedPauliRotation` gates.
+This allows for significantly faster computation with the gate.
+"""
+function _tomaskedpaulirotation(circ::Vector{G}, ::Type{TT}) where {G<:Gate,TT<:PauliStringType}
+    masked_circ = copy(circ)
+    for (ii, gate) in enumerate(masked_circ)
+        if isa(gate, PauliRotation)
+            masked_circ[ii] = _tomaskedpaulirotation(gate, TT)
+        end
     end
-    return FastPauliRotation(pauli_gate.symbols, pauli_gate.qinds, base_pstr)
+    return masked_circ
+end
+
+"""
+    _tomaskedpaulirotation(pauli_gate::PauliRotation, nqubits::Integer)
+
+Transforms a `PauliRotation` to a `MaskedPauliRotation` which carries the integer representation of the gate generator.
+This allows for significantly faster computation with the gate.
+"""
+function _tomaskedpaulirotation(pauli_gate::PauliRotation, nqubits::Integer)
+    pstr_term = symboltoint(nqubits, pauli_gate.symbols, pauli_gate.qinds)
+    return MaskedPauliRotation(pauli_gate.symbols, pauli_gate.qinds, pstr_term)
+end
+
+"""
+    _tomaskedpaulirotation(frozen_gate::FrozenGate, nqubits::Integer)
+
+Transforms a `FrozenGate` with a `PauliRotation` to a `MaskedPauliRotation` 
+which carries the integer representation of the gate generator.
+"""
+function _tomaskedpaulirotation(frozen_gate::FrozenGate, nqubits::Integer)
+    return FrozenGate(_tomaskedpaulirotation(frozen_gate.gate, nqubits), frozen_gate.theta)
+end
+
+"""
+    _tomaskedpaulirotation(fast_pauli_gate::MaskedPauliRotation, args...)
+
+Return the `MaskedPauliRotation` gate as is.
+"""
+function _tomaskedpaulirotation(masked_pauli_gate::MaskedPauliRotation, args...)
+    return masked_pauli_gate
+end
+
+"""
+    _tomaskedpaulirotation(pauli_gate::PauliRotation, ::TermType)
+
+Transforms a `PauliRotation` to a `MaskedPauliRotation` which carries the integer representation of the gate generator.
+This allows for significantly faster computation with the gate.
+"""
+function _tomaskedpaulirotation(pauli_gate::PauliRotation, ::Type{TT}) where {TT<:PauliStringType}
+    pstr_term = symboltoint(TT, pauli_gate.symbols, pauli_gate.qinds)
+    return MaskedPauliRotation(pauli_gate.symbols, pauli_gate.qinds, pstr_term)
 end
 
 
@@ -87,11 +142,11 @@ end
 """
     apply(gate::PauliRotationUnion, pstr::PauliString, theta)
 
-Apply a `(Fast)PauliRotation` with an angle `theta` to a `PauliString`.
+Apply a `PauliRotation` with an angle `theta` to a `PauliString`.
 Returns either a single `PauliString` or a tuple of two `PauliString`s. 
 The latter is the case when the `gate` does not commute with the `PauliString`.
 """
-function apply(gate::PauliRotationUnion, pstr::PauliString, theta)
+function apply(gate::PauliRotation, pstr::PauliString, theta)
     if commutes(gate, pstr)
         return pstr
     else
@@ -101,13 +156,13 @@ function apply(gate::PauliRotationUnion, pstr::PauliString, theta)
 end
 
 """
-    apply(gate::PauliRotationUnion, pstr::PauliStringType, theta, coefficient=1.0)
+    apply(gate::PauliRotation, pstr::PauliStringType, theta, coefficient=1.0)
 
-Apply a `(Fast)PauliRotation` with an angle `theta` and a coefficient `coefficient` to an integer Pauli string.
+Apply a `PauliRotation` with an angle `theta` and a coefficient `coefficient` to an integer Pauli string.
 Returns either one pair of (pstr, coefficient) in one tuple or two pairs as one tuple.
 The latter is the case when the `gate` does not commute with the Pauli string.
 """
-function apply(gate::PauliRotationUnion, pstr::PauliStringType, theta, coefficient=1.0)
+function apply(gate::PauliRotation, pstr::PauliStringType, theta, coefficient=1.0)
     if commutes(gate, pstr)
         return pstr, coefficient
     else
@@ -116,9 +171,9 @@ function apply(gate::PauliRotationUnion, pstr::PauliStringType, theta, coefficie
 end
 
 """
-    applynoncummuting(gate::PauliRotationUnion, pstr::PauliStringType, theta, coefficient=1.0; kwargs...)
+    applynoncummuting(gate::PauliRotation, pstr::PauliStringType, theta, coefficient=1.0; kwargs...)
 
-Apply a `(Fast)PauliRotation` with an angle `theta` and a coefficient `coefficient` to an integer Pauli string,
+Apply a `PauliRotation` with an angle `theta` and a coefficient `coefficient` to an integer Pauli string,
 assuming that the gate does not commute with the Pauli string.
 Returns two pairs of (pstr, coefficient) as one tuple.
 Currently `kwargs` are passed to `applycos` and `applysin` for the Surrogate.
@@ -132,11 +187,11 @@ function applynoncummuting(gate::PauliRotationUnion, pstr::PauliStringType, thet
 end
 
 """
-    commutes(gate::PauliRotationUnion, pstr::PauliString)
+    commutes(gate::PauliRotation, pstr::PauliString)
 
-Check if a `(Fast)PauliRotation` commutes with a `PauliString`.
+Check if a `PauliRotation` commutes with a `PauliString`.
 """
-function commutes(gate::PauliRotationUnion, pstr::PauliString)
+function commutes(gate::PauliRotation, pstr::PauliString)
     return commutes(gate, pstr.term)
 end
 
@@ -150,12 +205,12 @@ function commutes(gate::PauliRotation, pstr::PauliStringType)
 end
 
 """
-    commutes(gate::FastPauliRotation, pstr::PauliStringType)
+    commutes(gate::MaskedPauliRotation, pstr::PauliStringType)
 
-Check if a `FastPauliRotation` commutes with an integer Pauli string.
+Check if a `MaskedPauliRotation` commutes with an integer Pauli string.
 """
-function commutes(gate::FastPauliRotation, pstr::PauliStringType)
-    return commutes(gate.term, pstr)
+function commutes(gate::MaskedPauliRotation, pstr::PauliStringType)
+    return commutes(gate.generator_mask, pstr)
 end
 
 """
@@ -244,14 +299,14 @@ function getnewpaulistring(gate::PauliRotation, pstr::PauliStringType)
 end
 
 """
-    getnewpaulistring(gate::FastPauliRotation, pstr::PauliStringType)
+    getnewpaulistring(gate::MaskedPauliRotation, pstr::PauliStringType)
 
-Get the new Pauli string after applying a `FastPauliRotation` to an integer Pauli string,
+Get the new Pauli string after applying a `MaskedPauliRotation` to an integer Pauli string,
 as well as the corresponding ±1 coefficient.
 """
-function getnewpaulistring(gate::FastPauliRotation, pstr::PauliStringType)
+function getnewpaulistring(gate::MaskedPauliRotation, pstr::PauliStringType)
     # TODO: This allocates memory
-    sign, new_pstr = pauliprod(gate.term, pstr, gate.qinds)
+    sign, new_pstr = pauliprod(gate.generator_mask, pstr, gate.qinds)
     return new_pstr, real(1im * sign)
 end
 

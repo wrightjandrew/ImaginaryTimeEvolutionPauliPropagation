@@ -21,7 +21,7 @@ If a 4-argument apply function is defined for a concrete type, it will still dis
 """
 apply(gate::SG, pstr, theta, coefficient=1.0; kwargs...) where {SG<:StaticGate} = apply(gate, pstr, coefficient; kwargs...)
 
-include("fastgates.jl")
+
 include("frozengates.jl")
 include("paulirotations.jl")
 include("cliffordgates.jl")
