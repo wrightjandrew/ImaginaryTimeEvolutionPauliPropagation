@@ -1,6 +1,7 @@
 module PauliPropagation
 
 using Base.Threads
+using LinearAlgebra
 
 include("./PauliAlgebra/PauliAlgebra.jl")
 export
@@ -11,6 +12,7 @@ export
     term,
     paulis,
     coefficients,
+    norm,
     paulitype,
     coefftype,
     numcoefftype,

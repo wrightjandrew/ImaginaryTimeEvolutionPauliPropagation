@@ -341,7 +341,15 @@ function tonumber(val::Number)
     return val
 end
 
-# TODO: implement norm for PauliSum
+"""
+    norm(psum::PauliSum, L=2)
+
+Calculate the norm of a `PauliSum` with respect to the `L`-norm. 
+Calls LinearAlgebra.norm on the coefficients of the `PauliSum`.
+"""
+function norm(psum::PauliSum, L=2)
+    return LinearAlgebra.norm(coefficients(psum), L)
+end
 
 """
     topaulistrings(psum::PauliSum)
