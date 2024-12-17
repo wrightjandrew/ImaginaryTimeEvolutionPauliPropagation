@@ -134,8 +134,6 @@ export
 include("Surrogate/Surrogate.jl")
 export
     NodePathProperties,
-    EvalEndNode,
-    PauliRotationNode,
     evaluate!,
     reset!
 
