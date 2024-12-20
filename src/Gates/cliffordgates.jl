@@ -19,7 +19,7 @@ function CliffordGate(symbol::Symbol, qind::Int)
 end
 
 """
-    CliffordGate(symbol::Symbol, qinds::Union{AbstractArray, Tuple, Base.Generator})
+    CliffordGate(symbol::Symbol, qinds::Tuple{Int...})
 
 Constructor for a `CliffordGate` acting on the qubits `qinds`. 
 Converts the types of `qinds` to the correct types for `CliffordGate`.

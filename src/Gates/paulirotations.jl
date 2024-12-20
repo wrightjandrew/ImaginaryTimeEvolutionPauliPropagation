@@ -26,7 +26,7 @@ function PauliRotation(symbol::Symbol, qind::Int)
 end
 
 """
-    PauliRotation(symbols::Union{AbstractArray,Tuple,Base.Generator}, qinds::Union{AbstractArray,Tuple,Base.Generator})
+    PauliRotation(symbols::Tuple{Symbol...}, qinds::Tuple{Symbol...})
 
 Constructor for a `PauliRotation` acting on the qubits `qinds` with the Pauli string `symbols`. 
 Converts the types of the input arguments to the correct types for `PauliRotation`.
