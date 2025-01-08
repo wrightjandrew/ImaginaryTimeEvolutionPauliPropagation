@@ -9,7 +9,6 @@ export
     PauliType,
     PauliSum,
     PauliString,
-    term,
     paulis,
     coefficients,
     norm,
@@ -40,12 +39,6 @@ export
     commutator,
     getinttype
 
-
-include("pathproperties.jl")
-export
-    PathProperties,
-    NumericPathProperties,
-    wrapcoefficients
 
 include("Gates/Gates.jl")
 export
@@ -87,8 +80,18 @@ export
     appendSU4!,
     ibmeagletopology
 
+include("PathProperties/PathProperties.jl")
+export
+    PathProperties,
+    PauliFreqTracker,
+    wrapcoefficients
+
 include("truncations.jl")
 export
+    truncateweight,
+    truncatemincoeff,
+    truncatefrequency,
+    truncatesins,
     truncatedampingcoeff
 
 include("Propagation/Propagation.jl")
@@ -124,10 +127,8 @@ export
 
 include("numericalcertificates.jl")
 export
-    estimateaverageerror,
-    estimateaverageerror!,
-    montecarlopropagation,
-    mcapply
+    estimatemse,
+    estimatemse!
 
 include("Surrogate/Surrogate.jl")
 export
