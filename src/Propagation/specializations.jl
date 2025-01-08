@@ -117,7 +117,7 @@ function applywithmap(gate::CliffordGate, pstr::PauliStringType, coeff, map_arra
 end
 
 function _extractlookupop(lookup_int::PauliStringType, qinds)
-    partial_pstr = typeof(lookup_int)(0)
+    partial_pstr = identitylike(lookup_int)
     for ii in eachindex(qinds)
         partial_pstr = setpauli(partial_pstr, getpauli(lookup_int, qinds[ii]), ii)
     end

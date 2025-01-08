@@ -63,7 +63,7 @@ NOTE: This requires calling `resetnodes` in-between evaluations with different `
 `eval_list` does not need to be passed when manually using this function.
 """
 function _traceevalorder(node::PauliRotationNode, thetas; eval_list=nothing)
-    val = typeof(node.cummulative_value)(0)
+    val = zero(node.cummulative_value)
 
     if isevaluated(node)
         return node.cummulative_value

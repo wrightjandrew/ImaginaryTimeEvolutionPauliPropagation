@@ -20,6 +20,8 @@ export
     add!,
     set!,
     empty!,
+    identitypauli,
+    identitylike,
     inttosymbol,
     symboltoint,
     inttostring,

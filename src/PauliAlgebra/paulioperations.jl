@@ -253,7 +253,7 @@ function commutator(pstr1::PauliStringType, pstr2::PauliStringType)
     # TODO: adapt order of outputs.
     if commutes(pstr1, pstr2)
         total_sign = ComplexF64(0.0)
-        new_pstr = zero(typeof(pstr1))
+        new_pstr = identitylike(pstr1)
     else
         total_sign, new_pstr = pauliprod(pstr1, pstr2)
     end

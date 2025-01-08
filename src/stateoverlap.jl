@@ -84,7 +84,7 @@ Calculates the overlap of a Pauli sum with the computational basis state which h
 For example, `overlapwithcomputational(psum, [1,2,4])` returns the overlap with `|1101000...>`
 """
 function overlapwithcomputational(psum::PauliSum, onebitinds)
-    val = numcoefftype(psum)(0)
+    val = zero(numcoefftype(psum))
     for (pstr, coeff) in psum
         val += tonumber(coeff) * _calcsignwithones(pstr, onebitinds)
     end
@@ -123,8 +123,8 @@ function overlapwithmaxmixed(psum::PauliSum{TT,CT}) where {TT,CT}
     end
 
     NumType = numcoefftype(psum)
-    # TT(0) is the all-identity Pauli
-    return get(psum.terms, TT(0), zero(NumType))
+
+    return get(psum.terms, identitypauli(TT), zero(NumType))
 end
 
 """
