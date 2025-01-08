@@ -1,44 +1,47 @@
 ### Propagation necessities
 
 """
-    propagate(circ, pstr::PauliString{PauliStringType,NodePathProperties}; kwargs...)
+    propagate(circ, pstr::PauliString{PauliStringType,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
 Construct a Pauli propagation surrogate of the propagated `PauliString` through the circuit `circ` in the Heisenberg picture. 
 The circuit must only contain `CliffordGate`s and `PauliRotation`s.
 It is applied to the Pauli string in reverse order, and the action of each gate is its conjugate action.
-`kwargs` are passed to the truncation function. Supported by default for the surrogation are `max_weight`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Default truncations are `max_weight`, `max_freq`, and `max_sins`.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate(circ, pstr::PauliString{TT,NodePathProperties}; kwargs...) where {TT<:PauliStringType}
-    return propagate(circ, PauliSum(pstr); kwargs...)
+function propagate(circ, pstr::PauliString{TT,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...) where {TT<:PauliStringType}
+    return propagate(circ, PauliSum(pstr); max_weight, max_freq, max_sins, customtruncfunc, kwargs...)
 end
 
 """
-    propagate(circ, psum::PauliSum{PauliStringType,NodePathProperties}; kwargs...)
+    propagate(circ, psum::PauliSum{PauliStringType,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
 Construct a Pauli propagation surrogate of the propagated `PauliSum` through the circuit `circ` in the Heisenberg picture.
 The circuit must only contain `CliffordGate`s and `PauliRotation`s. 
 It is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
-`kwargs` are passed to the truncation function. Supported by default for the surrogation are `max_weight`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Default truncations are `max_weight`, `max_freq`, and `max_sins`.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate(circ, psum::PauliSum{TT,NodePathProperties}; kwargs...) where {TT<:PauliStringType}
+function propagate(circ, psum::PauliSum{TT,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...) where {TT<:PauliStringType}
     _checksurrogationconditions(circ)
-    return propagate!(circ, PauliSum(psum.nqubits, copy(psum.terms)); kwargs...)
+    return propagate!(circ, PauliSum(psum.nqubits, copy(psum.terms)); max_weight, max_freq, max_sins, customtruncfunc, kwargs...)
 end
 
 """
-    propagate!(circ, psum::PauliSum{PauliStringType,NodePathProperties}; kwargs...)
+    propagate!(circ, psum::PauliSum{PauliStringType,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
 Construct a Pauli propagation surrogate of the propagated `PauliSum` through the circuit `circ` in the Heisenberg picture. 
 The `PauliSum` `psum` is modified in place.
 The circuit must only contain `CliffordGate`s and `PauliRotation`s. 
 It is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 The input `psum` will be modified.
-`kwargs` are passed to the truncation function. Supported by default for the surrogation are `max_weight`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Default truncations are `max_weight`, `max_freq`, and `max_sins`.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate!(circ, psum::PauliSum{TT,NodePathProperties}; kwargs...) where {TT<:PauliStringType}
+function propagate!(circ, psum::PauliSum{TT,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...) where {TT<:PauliStringType}
     _checksurrogationconditions(circ)
 
     thetas = Array{Float64}(undef, countparameters(circ))
@@ -49,7 +52,7 @@ function propagate!(circ, psum::PauliSum{TT,NodePathProperties}; kwargs...) wher
 
     for gate in reverse(circ)
         # add param_index as kwarg, which will descend into the apply function eventually
-        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; param_idx=param_idx, kwargs...)
+        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight, max_freq, max_sins, customtruncfunc, param_idx=param_idx, kwargs...)
     end
     return psum
 end

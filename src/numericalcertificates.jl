@@ -1,7 +1,7 @@
 using Statistics
 
 """
-    estimatemse(circ, pstr::PauliString, n_mcsamples::Integer, thetas=π; stateoverlapfunc=overlapwithzero, circuit_is_reversed=false, customtruncatefn=nothing)
+    estimatemse(circ, pstr::PauliString, n_mcsamples::Integer, thetas=π; stateoverlapfunc=overlapwithzero, circuit_is_reversed=false, customtruncfunc=nothing)
 
 Function to estimate the mean square error of a truncated circuit simulation using Monte Carlo sampling.
 Returns the mean squared error of the truncated Pauli propagation simulation averaged over the `thetas`∈ [theta, theta] of the angle `theta` of each `PauliRotation`.
@@ -15,7 +15,7 @@ For `PauliRotation`, the value should be the integration range of the parameters
 An initial state overlap function `stateoverlapfunc` can be provided to calculate the overlap of the backpropagated Pauli strings with the initial state.
 Importantly, the `kwargs` can be used to set the truncation parameters of the Pauli propagation. Currently supported are `max_weight`, `max_freq`, and `max_sins`.
 Note that `min_abs_coeff` is not supported here, as we consider errors integrated over the angles. `max_freq` effectively truncates small coefficients below (1/2)^`max_freq` on average over `thetas ∈ [-π, π]`.
-A custom truncation function can be passed as `customtruncatefn` with the signature `customtruncatefn(pstr::PauliStringType, coefficient)::Bool`.
+A custom truncation function can be passed as `customtruncfunc` with the signature `customtruncfunc(pstr::PauliStringType, coefficient)::Bool`.
 """
 function estimatemse(circ, pstr::PauliString, n_mcsamples::Integer, thetas=π; stateoverlapfunc=overlapwithzero, circuit_is_reversed=false, kwargs...)
     # this function is only valid for ParametrizedGates and non-splitting non-parametrized gates (here only CliffordGates).
@@ -39,7 +39,7 @@ end
 In-place version of `estimatemse`. This function takes an array `error_array` of length `n_mcsamples` as an argument and modifies it in-place. 
 It further assumes that the `thetas` and `split_probabilities` are already correctly calculated and provided as arguments. 
 In general they will be vectors, but they can also be real numbers.
-A custom truncation function can be passed as `customtruncatefn` with the signature `customtruncatefn(pstr::PauliStringType, coefficient)::Bool`.
+A custom truncation function can be passed as `customtruncfunc` with the signature `customtruncfunc(pstr::PauliStringType, coefficient)::Bool`.
 """
 function estimatemse!(circ, pstr::PauliString, error_array::AbstractVector, thetas, split_probabilities; stateoverlapfunc=overlapwithzero, circuit_is_reversed=false, kwargs...)
     # This function takes an error_array as an argument and modifies it in-place.
@@ -90,7 +90,7 @@ Perform a single Monte Carlo propagation of a Pauli string through an already re
 It further assumes that the `thetas` and `split_probabilities` are already correctly calculated and provided as arguments. 
 In general they will be vectors, but they can also be real numbers.
 """
-function montecarlopropagation(circ, pstr::PauliString, thetas, split_probabilities; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncatefn=nothing)
+function montecarlopropagation(circ, pstr::PauliString, thetas, split_probabilities; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing)
 
     param_idx = length(thetas)
     prob_idx = length(split_probabilities)
@@ -103,7 +103,7 @@ function montecarlopropagation(circ, pstr::PauliString, thetas, split_probabilit
         pstr = mcapply(gate, pstr, _getelmt(thetas, param_idx), _getelmt(split_probabilities, prob_idx))
 
         # check if one would truncate the Pauli string
-        is_truncated = _checktruncation(pstr, max_weight, max_freq, max_sins; customtruncatefn)
+        is_truncated = _checktruncation(pstr, max_weight, max_freq, max_sins; customtruncfunc)
 
         # decrement the parameter index if gate is parametrized
         if isa(gate, ParametrizedGate) && param_idx > 0
@@ -117,7 +117,7 @@ function montecarlopropagation(circ, pstr::PauliString, thetas, split_probabilit
 end
 
 
-function _checktruncation(pstr::PauliString, max_weight, max_freq, max_sins; customtruncatefn=nothing)
+function _checktruncation(pstr::PauliString, max_weight, max_freq, max_sins; customtruncfunc=nothing)
     # check truncations
     if truncateweight(pstr.term, max_weight)
         is_truncated = true
@@ -125,8 +125,8 @@ function _checktruncation(pstr::PauliString, max_weight, max_freq, max_sins; cus
         is_truncated = true
     elseif truncatesins(pstr.coeff, max_sins)
         is_truncated = true
-    elseif !isnothing(customtruncatefn)
-        is_truncated = customtruncatefn(pstr.term, pstr.coeff)
+    elseif !isnothing(customtruncfunc)
+        is_truncated = customtruncfunc(pstr.term, pstr.coeff)
     else
         is_truncated = false
     end
