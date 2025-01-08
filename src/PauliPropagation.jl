@@ -62,22 +62,29 @@ export
     freeze,
     TGate
 
-include("circuits.jl")
+include("Circuits/Circuits.jl")
 export
     countparameters,
+    getparameterindices,
     bricklayertopology,
     staircasetopology,
-    get2dtopology,
-    get2dstaircasetopology,
+    rectangletopology,
+    staircasetopology2d,
+    ibmeagletopology,
     hardwareefficientcircuit,
     efficientsu2circuit,
     tfitrottercircuit,
     tiltedtfitrottercircuit,
     heisenbergtrottercircuit,
-    su4ansatz,
-    qcnnansatz,
+    su4circuit,
+    qcnncircuit,
     appendSU4!,
-    ibmeagletopology
+    rxlayer!,
+    rylayer!,
+    rzlayer!,
+    rxxlayer!,
+    ryylayer!,
+    rzzlayer!
 
 include("PathProperties/PathProperties.jl")
 export
