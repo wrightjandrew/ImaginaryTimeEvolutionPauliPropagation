@@ -304,7 +304,10 @@ Calculate the norm of a `PauliSum` with respect to the `L`-norm.
 Calls LinearAlgebra.norm on the coefficients of the `PauliSum`.
 """
 function norm(psum::PauliSum, L=2)
-    return LinearAlgebra.norm(coefficients(psum), L)
+    if length(psum) == 0
+        return 0.0
+    end
+    return LinearAlgebra.norm((tonumber(coeff) for coeff in coefficients(psum)), L)
 end
 
 """
