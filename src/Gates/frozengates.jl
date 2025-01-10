@@ -1,3 +1,11 @@
+### frozengates.jl
+##
+# A file for frozen gates. Frozen gates are wrappers around parametrized gates tied to a fixed parameter.
+# This way a parameter does not need to be passed to `propagate`, because it is already attached to the gate.
+# This is not the intended way of using parametrized gates if the parameters change of the gate parameters are to be optimized. 
+##
+###
+
 """
     FrozenGate(gate::ParametrizedGate, parameter::Number)
 
@@ -43,24 +51,4 @@ function freeze(gates, parameters)
         end
     end
     return frozen_gates
-end
-
-"""
-    tofastgates(frozen_gate::PauliGate, nqubits::Integer)
-
-Transforms a `PauliGate` to a `FastPauliGate` which carries the integer representation of the gate generator.
-This allows for significantly faster computation with the gate.
-"""
-function tofastgates(frozen_gate::FrozenGate, nqubits::Integer)
-    return FrozenGate(tofastgates(frozen_gate.gate, nqubits), frozen_gate.parameter)
-end
-
-"""
-    apply(frozen_gate::FrozenGate, pstr, theta, args...)
-
-Apply a `FrozenGate` to a Pauli string `pstr` with the parameter `FrozenGate.parameter`.
-The passed `theta` will be ignored.
-"""
-function apply(frozen_gate::FrozenGate, pstr, theta, coefficient=1.0; kwargs...)
-    return apply(frozen_gate.gate, pstr, frozen_gate.parameter, coefficient; kwargs...)
 end

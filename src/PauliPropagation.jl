@@ -1,22 +1,27 @@
 module PauliPropagation
 
 using Base.Threads
+using LinearAlgebra
 
 include("./PauliAlgebra/PauliAlgebra.jl")
 export
+    PauliStringType,
+    PauliType,
     PauliSum,
     PauliString,
     paulis,
     coefficients,
+    norm,
     paulitype,
     coefftype,
     numcoefftype,
     getcoeff,
     topaulistrings,
-    add,
     add!,
-    subtract,
-    subtract!,
+    set!,
+    empty!,
+    identitypauli,
+    identitylike,
     inttosymbol,
     symboltoint,
     inttostring,
@@ -34,27 +39,17 @@ export
     getinttype
 
 
-include("pathproperties.jl")
-export
-    PathProperties,
-    NumericPathProperties,
-    wrapcoefficients
-
 include("Gates/Gates.jl")
 export
     Gate,
     ParametrizedGate,
     StaticGate,
-    PauliGate,
-    FastPauliGate,
-    tofastgates,
-    apply,
-    applynoncummuting,
+    PauliRotation,
+    MaskedPauliRotation,
     CliffordGate,
     clifford_map,
     reset_clifford_map!,
     createcliffordmap,
-    applywithmap,
     ParametrizedNoiseChannel,
     PauliNoise,
     DepolarizingNoise,
@@ -64,35 +59,56 @@ export
     PauliZNoise,
     AmplitudeDampingNoise,
     FrozenGate,
-    freeze
+    freeze,
+    TGate
 
-
-include("circuits.jl")
+include("Circuits/Circuits.jl")
 export
     countparameters,
+    getparameterindices,
     bricklayertopology,
-    get2dtopology,
-    get2dstaircasetopology,
+    staircasetopology,
+    rectangletopology,
+    staircasetopology2d,
+    ibmeagletopology,
     hardwareefficientcircuit,
     efficientsu2circuit,
     tfitrottercircuit,
+    tiltedtfitrottercircuit,
     heisenbergtrottercircuit,
-    su4ansatz,
-    qcnnansatz,
-    appendSU4!
+    su4circuit,
+    qcnncircuit,
+    appendSU4!,
+    rxlayer!,
+    rylayer!,
+    rzlayer!,
+    rxxlayer!,
+    ryylayer!,
+    rzzlayer!
+
+include("PathProperties/PathProperties.jl")
+export
+    PathProperties,
+    PauliFreqTracker,
+    wrapcoefficients
 
 include("truncations.jl")
 export
+    truncateweight,
+    truncatemincoeff,
+    truncatefrequency,
+    truncatesins,
     truncatedampingcoeff
 
 include("Propagation/Propagation.jl")
 export
     propagate,
     propagate!,
-    mergingapply!,
-    applygatetoall!,
-    applygatetoone!,
-    mergeandclear!,
+    applymergetruncate!,
+    applytoall!,
+    apply,
+    applyandadd!,
+    mergeandempty!,
     merge
 
 include("stateoverlap.jl")
@@ -100,8 +116,10 @@ export
     overlapbyorthogonality,
     overlapwithzero,
     overlapwithplus,
+    overlapwithones,
     orthogonaltozero,
     orthogonaltoplus,
+    overlapwithcomputational,
     overlapwithpaulisum,
     overlapwithmaxmixed,
     filter,
@@ -111,20 +129,16 @@ export
     plusfilter,
     plusfilter!,
     evaluateagainstdict,
-    getnumcoeff
+    tonumber
 
 include("numericalcertificates.jl")
 export
-    estimateaverageerror,
-    estimateaverageerror!,
-    montecarlopropagation,
-    mcapply
+    estimatemse,
+    estimatemse!
 
 include("Surrogate/Surrogate.jl")
 export
     NodePathProperties,
-    EvalEndNode,
-    PauliGateNode,
     evaluate!,
     reset!
 

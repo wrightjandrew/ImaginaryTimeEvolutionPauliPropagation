@@ -19,7 +19,7 @@ function CliffordGate(symbol::Symbol, qind::Int)
 end
 
 """
-    CliffordGate(symbol::Symbol, qinds::Union{AbstractArray, Tuple, Base.Generator})
+    CliffordGate(symbol::Symbol, qinds::Tuple{Int...})
 
 Constructor for a `CliffordGate` acting on the qubits `qinds`. 
 Converts the types of `qinds` to the correct types for `CliffordGate`.
@@ -44,6 +44,14 @@ const _default_clifford_map = Dict(
     ],
 )
 
+"""
+    clifford_map
+
+Global dictionary of Clifford gates and their action on Pauli strings.
+Currently supported Clifford gates are `:H`, `:X`, `:Y`, `:Z`, `:S`, `:CNOT`, `:ZZpihalf`, and `:SWAP`.
+If one indexes into the returned arrays with the integer that corresponds to the partial Pauli string,
+the returned tuple is `(sign, partial_pstr)` where `sign` is the sign change and `partial_pstr` is the new partial Pauli string.
+"""
 const clifford_map = deepcopy(_default_clifford_map)
 
 """
@@ -92,70 +100,4 @@ function createcliffordmap(gate_relations::Dict)
     end
 
     return mapped_gate
-end
-
-### Applying Clifford gates
-"""
-    apply(gate::CliffordGate, pstr::PauliString, args...)
-
-Apply a `CliffordGate` to a `PauliString`. Returns a new `PauliString`.
-"""
-function apply(gate::CliffordGate, pstr::PauliString, args...; kwargs...)
-    return PauliString(pstr.nqubits, apply(gate, pstr.operator, pstr.coeff)...)
-end
-
-"""
-    apply(gate::CliffordGate, pstr::PauliStringType, coefficient=1.0)
-
-Apply a `CliffordGate` to an integer Pauli string and an optional coefficient. 
-"""
-function apply(gate::CliffordGate, pstr::PauliStringType, coefficient=1.0; kwargs...)
-    map_array = clifford_map[gate.symbol]
-    return applywithmap(gate, pstr, coefficient, map_array)
-end
-
-"""
-    apply(gate::CliffordGate, str::PauliStringType, theta, coefficient)
-
-Apply a `CliffordGate` to an integer Pauli string and a coefficient. 
-The extra `theta` argument may arise in other parts of the package.
-"""
-function apply(gate::CliffordGate, pstr::PauliStringType, theta, coefficient; kwargs...)
-    return apply(gate, pstr, coefficient)
-end
-
-"""
-    applywithmap(gate::CliffordGate, pstr::PauliStringType, coefficient, map_array)
-
-Apply a `CliffordGate` to an integer Pauli string and a coefficient 
-using the a `map_array` corresponding to the `CliffordGate`.
-"""
-function applywithmap(gate::CliffordGate, pstr::PauliStringType, coefficient, map_array; kwargs...)
-    qinds = gate.qinds
-
-    lookup_op = _extractlookupop(pstr, qinds)
-    sign, new_op = map_array[lookup_op+1]  # +1 because Julia is 1-indexed and lookup_op is 0-indexed
-    pstr = _insertnewop!(pstr, new_op, qinds)
-
-    coefficient = _multiplysign(coefficient, sign)
-    return pstr, coefficient
-end
-
-function _extractlookupop(operator, qinds)
-    lookup_op = typeof(operator)(0)
-    for ii in eachindex(qinds)
-        lookup_op = setpauli(lookup_op, getpauli(operator, qinds[ii]), ii)
-    end
-    return lookup_op
-end
-
-function _insertnewop!(operator, new_op, qinds)
-    for ii in eachindex(qinds)
-        operator = setpauli(operator, getpauli(new_op, ii), qinds[ii])
-    end
-    return operator
-end
-
-function _multiplysign(coefficient, sign)
-    return coefficient * sign
 end

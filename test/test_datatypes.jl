@@ -37,7 +37,7 @@ function addtopaulisum(nq)
     pstr_temp = pstr + pstr
     @test isa(pstr_temp, PauliSum)
     add!(psum, pstr)
-    @test getcoeff(psum, pstr.operator) == pstr.coeff
+    @test getcoeff(psum, pstr.term) == pstr.coeff
 
     symbol = rand([:I, :X, :Y, :Z])
     qind = rand(1:nq)
@@ -61,7 +61,7 @@ end
 
 @testset "PauliString Tests" begin
     pstr = createpaulistring(7)
-    wrapped_pstr = wrapcoefficients(pstr, NumericPathProperties)
+    wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
 end
 
 # Test PauliSum from Dict creation
@@ -69,7 +69,7 @@ function test_paulisum_from_dict()
     psum = PauliSum(3, Dict([:I, :I, :I] => 1.5, [:I, :I, :Y] => 1.0))
 
     # Collect and return keys and values for testing
-    return collect(keys(psum.op_dict)), collect(values(psum.op_dict))
+    return collect(keys(psum.terms)), collect(values(psum.terms))
 end
 
 # Test subtraction of PauliSum
@@ -77,7 +77,7 @@ function subtractpaulisums()
     psum1 = PauliSum(3, Dict([:I, :I, :I] => 1.5, [:I, :I, :Y] => 1.0))
     psum2 = PauliSum(3, Dict([:I, :I, :I] => 1.5))
 
-    return subtract!(psum1, psum2), psum1
+    return psum1 - psum2
 end
 
 # Test overloading methods for PauliSum
@@ -90,9 +90,7 @@ end
     @test pauli_cs == [1.0, 1.5]
 
     # Subtest for subtracting PauliSum
-    result_psum, modified_psum = subtractpaulisums()
+    result_psum = subtractpaulisums()
     expected_psum = PauliSum(3, Dict([:I, :I, :Y] => 1.0))
     @test result_psum == expected_psum
-    # Verify that psum1 has been modified correctly (in-place subtraction)
-    @test modified_psum == expected_psum
 end

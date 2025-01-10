@@ -1,3 +1,11 @@
+### Gates.jl
+##
+# The top level file for gates.
+# Gates are defined as structs that subtype either `ParametrizedGate` or `StaticGate`.
+# How the gates act is defined in the `Propagation` module.
+##
+###
+
 """
 Abstract type for gates. 
 """
@@ -9,60 +17,13 @@ Abstract type for parametrized gates.
 abstract type ParametrizedGate <: Gate end
 
 """
-Abstract type for static gates are not parametrized.
+Abstract type for static gates that are not parametrized.
 """
 abstract type StaticGate <: Gate end
 
+
 include("frozengates.jl")
-include("pauligates.jl")
+include("paulirotations.jl")
 include("cliffordgates.jl")
 include("noisechannels.jl")
-
-
-## Interface for transforming gates to potentially optimized gates
-"""
-    tofastgates(gate::Gate, nqubits::Integer)
-
-Transforms a gate to a potentially faster but more involved gate type when the total number of qubits `nqubits` is known.`
-This is currently only for `PauliGate` to `FastPauliGate`.
-"""
-tofastgates(gate::Gate, nqubits::Integer) = gate
-
-
-"""
-    tofastgates(circ::Vector{G}) where {G<:Gate}
-
-Transforms a circuit in the form of a vector of gates to a vector of potentially faster gates where applicable.
-"""
-function tofastgates(circ::Vector{G}) where {G<:Gate}
-    # Find the maximum number of qubits
-    nq = 1
-    for gate in circ
-        nq = max(nq, maximum(gate.qinds))
-    end
-
-    fast_circ = Vector{Gate}(undef, length(circ))
-    for (ii, gate) in enumerate(circ)
-        fast_circ[ii] = tofastgates(gate, nq)
-    end
-    return fast_circ
-end
-
-"""
-    tofastgates!(circ::Vector{G}) where {G<:Gate}
-
-Transforms a circuit in the form of a vector of gates, converting gates in-place to potentially faster gates where applicable.
-"""
-function tofastgates!(circ::Vector{G}) where {G<:Gate}
-    # Find the maximum number of qubits
-    nq = 1
-    for gate in circ
-        nq = max(nq, maximum(gate.qinds))
-    end
-
-    # TODO: This could fail if circ is too concretely typed
-    for (ii, gate) in enumerate(circ)
-        circ[ii] = tofastgates(gate, nq)
-    end
-    return circ
-end
+include("miscgates.jl")

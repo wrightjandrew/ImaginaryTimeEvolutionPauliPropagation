@@ -1,106 +1,101 @@
 ### Propagation necessities
 
 """
-    propagate(circ, pstr::PauliString; kwargs...)
+    propagate(circ, pstr::PauliString{PauliStringType,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
-Propagate a `PauliString` through the circuit `circ` in the Heisenberg picture. 
-`kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Construct a Pauli propagation surrogate of the propagated `PauliString` through the circuit `circ` in the Heisenberg picture. 
+The circuit must only contain `CliffordGate`s and `PauliRotation`s.
+It is applied to the Pauli string in reverse order, and the action of each gate is its conjugate action.
+Default truncations are `max_weight`, `max_freq`, and `max_sins`.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate(circ, pstr::PauliString; kwargs...)
-    _checkcoefftype(pstr)
-    psum = PauliSum(pstr.nqubits, pstr)
-    return propagate(circ, psum; kwargs...)
+function propagate(circ, pstr::PauliString{TT,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...) where {TT<:PauliStringType}
+    return propagate(circ, PauliSum(pstr); max_weight, max_freq, max_sins, customtruncfunc, kwargs...)
 end
 
 """
-    propagate(circ, psum::PauliSum; kwargs...)
+    propagate(circ, psum::PauliSum{PauliStringType,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
-Propagate a `PauliSum` through the circuit `circ` in the Heisenberg picture. 
-`kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Construct a Pauli propagation surrogate of the propagated `PauliSum` through the circuit `circ` in the Heisenberg picture.
+The circuit must only contain `CliffordGate`s and `PauliRotation`s. 
+It is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
+Default truncations are `max_weight`, `max_freq`, and `max_sins`.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate(circ, psum::PauliSum; kwargs...)
-    _checkcoefftype(psum)
-    pauli_dict = propagate!(circ, deepcopy(psum.op_dict); kwargs...)
-    return PauliSum(psum.nqubits, pauli_dict)
+function propagate(circ, psum::PauliSum{TT,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...) where {TT<:PauliStringType}
+    _checksurrogationconditions(circ)
+    return propagate!(circ, PauliSum(psum.nqubits, copy(psum.terms)); max_weight, max_freq, max_sins, customtruncfunc, kwargs...)
 end
 
-
 """
-    propagate!(circ, psum::PauliSum; kwargs...)
+    propagate!(circ, psum::PauliSum{PauliStringType,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
-Propagate a `PauliSum` through the circuit `circ` in the Heisenberg picture. 
+Construct a Pauli propagation surrogate of the propagated `PauliSum` through the circuit `circ` in the Heisenberg picture. 
+The `PauliSum` `psum` is modified in place.
+The circuit must only contain `CliffordGate`s and `PauliRotation`s. 
+It is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 The input `psum` will be modified.
-`kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Default truncations are `max_weight`, `max_freq`, and `max_sins`.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate!(circ, psum::PauliSum; kwargs...)
-    # check that circ only constists of Pauli gates and Clifford gates
-    if !all(isa(gate, CliffordGate) || isa(gate, PauliGateUnion) for gate in circ)
-        throw(ArgumentError("The surrogate currently only accepts Clifford gates and (Fast)Pauli gates."))
-    end
+function propagate!(circ, psum::PauliSum{TT,NodePathProperties}; max_weight=Inf, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...) where {TT<:PauliStringType}
+    _checksurrogationconditions(circ)
 
-    propagate!(circ, psum.op_dict; kwargs...)
-    return psum
-end
-
-"""
-    propagate!(circ, d::Dict{OpType,NodePathProperties}; kwargs...)
-
-Propagate a `Dict{PauliStringType,CoeffType}` through the circuit `circ` in the Heisenberg picture. 
-The input `psum` will be modified.
-`kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
-"""
-function propagate!(circ, psum::Dict{OpType,NodePathProperties}; kwargs...) where {OpType<:PauliStringType}
     thetas = Array{Float64}(undef, countparameters(circ))
 
     param_idx = length(thetas)
 
-    second_d = typeof(psum)()  # pre-allocating somehow doesn't do anything
+    aux_psum = similar(psum)
 
-    ## TODO:
-    # - decide where to reverse the circuit
-    # - verbose option  
-    # - more elegant param_idx incrementation
     for gate in reverse(circ)
         # add param_index as kwarg, which will descend into the apply function eventually
-        psum, second_d, param_idx = mergingapply!(gate, psum, second_d, thetas, param_idx; param_idx=param_idx, kwargs...)
+        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight, max_freq, max_sins, customtruncfunc, param_idx=param_idx, kwargs...)
     end
     return psum
 end
 
-
-function _checkcoefftype(pobj::Union{PauliString,PauliSum})
-    # convert numerical coefficients to `NodePathProperties` 
-    CoeffType = typeof(pobj).parameters[2]
-    if CoeffType <: Number
-        throw(
-            "`You are using the Surrogate's propagation function without passing parameters. " *
-            "But the current coefficient type is $(CoeffType)`. " *
-            "Consider converting to `NodePathProperties` via `wrapcoefficients(your_current_paulis, NodePathProperties)`."
-        )
+function _checksurrogationconditions(circ)
+    if !all(isa(gate, CliffordGate) || isa(gate, PauliRotation) for gate in circ)
+        throw(ArgumentError("The surrogate currently only accepts `CliffordGate`s and `PauliRotation`s."))
     end
     return
 end
 
 
-## For Pauli Gates
+## For Pauli Rotations
 
-function applycos(node::CircuitNode, theta; sign=1, param_idx=0, kwargs...)
-    return PauliGateNode(parents=[node], trig_inds=[1], signs=[sign], param_idx=param_idx)
+function splitapply(gate::MaskedPauliRotation, pstr::PauliStringType, coeff::NodePathProperties, theta; kwargs...)
+    coeff1 = _applycos(coeff, theta; kwargs...)
+    new_pstr, sign = getnewpaulistring(gate, pstr)
+    coeff2 = _applysin(coeff, theta, sign; kwargs...)
+
+    return pstr, coeff1, new_pstr, coeff2
 end
 
-function applysin(node::CircuitNode, theta; sign=1, param_idx=0, kwargs...)
-    return PauliGateNode(parents=[node], trig_inds=[-1], signs=[sign], param_idx=param_idx)
+function _applycos(path::NodePathProperties, theta, sign=1; param_idx=0, kwargs...)
+    return NodePathProperties(_applycos(path.node, theta, sign; param_idx=param_idx), path.nsins, path.ncos + 1, path.freq + 1)
+end
+
+function _applycos(node::CircuitNode, theta, sign=1; param_idx=0, kwargs...)
+    return PauliRotationNode(parents=[node], trig_inds=[1], signs=[sign], param_idx=param_idx)
+end
+
+function _applysin(path::NodePathProperties, theta, sign=1; param_idx=0, kwargs...)
+    return NodePathProperties(_applysin(path.node, theta, sign; param_idx=param_idx), path.nsins + 1, path.ncos, path.freq + 1)
+end
+
+function _applysin(node::CircuitNode, theta, sign=1; param_idx=0, kwargs...)
+    return PauliRotationNode(parents=[node], trig_inds=[-1], signs=[sign], param_idx=param_idx)
 end
 
 function merge(pth1::NodePathProperties, pth2::NodePathProperties)
     return NodePathProperties(
-        merge(pth1.coeff, pth2.coeff),
-        min(pth1.ncos, pth2.ncos),
+        merge(pth1.node, pth2.node),
         min(pth1.nsins, pth2.nsins),
+        min(pth1.ncos, pth2.ncos),
         min(pth1.freq, pth2.freq)
     )
 end
@@ -115,10 +110,10 @@ end
 ## For Clifford Gates
 
 function _multiplysign(pth::NodePathProperties, sign; kwargs...)
-    return NodePathProperties(_multiplysign(pth.coeff, sign), pth.nsins, pth.ncos, pth.freq)
+    return NodePathProperties(_multiplysign(pth.node, sign), pth.nsins, pth.ncos, pth.freq)
 end
 
-function _multiplysign(pauli_node::PauliGateNode, sign; kwargs...)
+function _multiplysign(pauli_node::PauliRotationNode, sign; kwargs...)
     for ii in eachindex(pauli_node.signs)
         pauli_node.signs[ii] *= sign
     end
@@ -128,4 +123,11 @@ end
 function _multiplysign(eval_endnode::EvalEndNode, sign; kwargs...)
     eval_endnode.coefficient *= sign
     return eval_endnode
+end
+
+## Truncation functions
+
+# don't truncate on coefficients
+function truncatemincoeff(path::NodePathProperties, min_abs_coeff::Real)
+    return false
 end
