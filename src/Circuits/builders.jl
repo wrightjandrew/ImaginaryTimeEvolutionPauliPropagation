@@ -258,14 +258,14 @@ rxlayer!(circuit, nqubits) = append!(circuit, (PauliRotation(:X, ii) for ii in 1
 
 Append a layer of single-qubit `PauliRotation(:Y, qind)` gates to the circuit for each pair in the topology.
 """
-rylayer!(circuit, nqubits) = append!(circuit, (PauliRotation(:y, ii) for ii in 1:nqubits))
+rylayer!(circuit, nqubits) = append!(circuit, (PauliRotation(:Y, ii) for ii in 1:nqubits))
 
 """
     rzlayer!(circuit, nqubits)
 
 Append a layer of single-qubit `PauliRotation(:Z, qind)` gates to the circuit for each pair in the topology.
 """
-rzlayer!(circuit, nqubits) = append!(circuit, (PauliRotation(:Y, ii) for ii in 1:nqubits))
+rzlayer!(circuit, nqubits) = append!(circuit, (PauliRotation(:Z, ii) for ii in 1:nqubits))
 
 """
     rxxlayer!(circuit, topology)
