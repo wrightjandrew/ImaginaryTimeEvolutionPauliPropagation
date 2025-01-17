@@ -28,9 +28,9 @@ function getparameterindices(circuit, ::Type{GT}) where {GT<:ParametrizedGate}
     indices = Int[]
 
     param_idx = 1
-    for (ii, gate) in enumerate(circuit)
+    for gate in circuit
         if isa(gate, GT)
-            push!(indices, ii)
+            push!(indices, param_idx)
         end
         if isa(gate, ParametrizedGate)
             param_idx += 1
@@ -49,9 +49,9 @@ function getparameterindices(circuit, ::Type{PauliRotation}, gate_symbols::Vecto
     indices = Int[]
 
     param_idx = 1
-    for (ii, gate) in enumerate(circuit)
+    for gate in circuit
         if isa(gate, PauliRotation) && gate.symbols == gate_symbols
-            push!(indices, ii)
+            push!(indices, param_idx)
         end
         if isa(gate, ParametrizedGate)
             param_idx += 1
@@ -70,9 +70,9 @@ function getparameterindices(circuit, ::Type{PauliRotation}, gate_symbols::Vecto
     indices = Int[]
 
     param_idx = 1
-    for (ii, gate) in enumerate(circuit)
+    for gate in circuit
         if isa(gate, PauliRotation) && gate.symbols == gate_symbols && gate.qinds == qinds
-            push!(indices, ii)
+            push!(indices, param_idx)
         end
         if isa(gate, ParametrizedGate)
             param_idx += 1
