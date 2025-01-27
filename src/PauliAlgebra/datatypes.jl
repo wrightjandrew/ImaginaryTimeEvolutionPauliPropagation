@@ -494,7 +494,7 @@ Provide the Pauli string as a `Symbol` (:I, :X, :Y, :Z) or `Vector{Symbol}`.
 Provide the index or indices for those symbols as `qind` or `qinds`.
 The coefficient of the Pauli string in the Pauli sum defaults to 1.0.
 """
-function add!(psum::PauliSum, paulis::Union{Symbol,Vector{Symbol}}, qinds::Union{T,Vector{T}}, coeff=1.0) where {T<:Integer}
+function add!(psum::PauliSum, paulis::Union{Symbol,Vector{Symbol}}, qinds, coeff=1.0)
     return add!(psum, PauliString(psum.nqubits, paulis, qinds, coeff))
 end
 
