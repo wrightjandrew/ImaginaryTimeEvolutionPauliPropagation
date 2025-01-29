@@ -102,18 +102,12 @@ export
     mergeandempty!,
     merge
 
-include("PauliTransferMatrix/unitaries.jl")
+include("PauliTransferMatrix/PauliTransferMatrix.jl")
 export
-    TUnitary,
-    U1Unitary,
-    get_unitary_dagmat,
-    constant_pauli_basis_n_qubits,
-    pauli_basis
-
-include("PauliTransferMatrix/paulitransfermaps.jl")
-export
-    calc_ptm_dagmap,
-    get_ptm_sparse
+    getpaulibasis,
+    calculateptm,
+    tomatrix,
+    totransfermap
 
 include("stateoverlap.jl")
 export

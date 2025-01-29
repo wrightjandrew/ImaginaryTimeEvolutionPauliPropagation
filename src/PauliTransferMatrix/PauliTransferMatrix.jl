@@ -1,2 +1,3 @@
 # unitaries.jl contrains implementations of local qubit unitaries.
-include("unitaries.jl")
+include("matrices.jl")
+include("paulitransfermaps.jl")

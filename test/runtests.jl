@@ -31,9 +31,7 @@ using Random
 
     include("test_paulioperations.jl")
 
-    include("test_paulitransfermaps.jl")    
-
-    include("test_unitaries.jl")    
+    include("test_paulitransfermaps.jl")
 
     include("test_truncations.jl")
 

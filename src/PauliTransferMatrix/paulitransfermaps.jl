@@ -1,27 +1,35 @@
-using SparseArrays
-
-
 """
-    function calc_ptm_dagmap(udag; tol=1e-15, symmetry=nothing)
+    function calculateptm(U; tol=1e-15)
 
+Calculate the Pauli Transfer Matrix (PTM) of a unitary matrix in sparse format.
+Note, by default the PTM is calculated in the Heisenberg picture, 
+i.e., the PTM is that of the conjugate transpose of the unitary matrix.
 Arguments
-- `udag::Array{}`: The unitary matrix for which the PTM is calculated.
+- `U::Array{}`: The unitary matrix for which the PTM is calculated.
 - `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
-- `symmetry::Array{}`: The symmetry matrix to apply to the PTM.
-    If no symmetry is provided, the PTM is computed in the Pauli basis.
 
 Returns
-- `ptm::SparseMatrixCSC`: The PTM of the unitary matrix `udag`.
+- `ptm::Matrix`: The PTM of the conjugate transpose of unitary matrix `U`.
 """
-function calc_ptm_dagmap(udag; tol=1e-15, symmetry=nothing)
+function calculateptm(U; tol=1e-15)
+    Udag = U'
+    if Udag * U ≈ U * Udag ≈ I
+        # The matrix is unitary, so the PTM is real
+        ET = Float64
+    else
+        # The matrix is not unitary, so the PTM can be complex
+        ET = ComplexF64
+    end
 
-    nqubits = Int(log(2, size(udag)[1]))
 
-    # Write ptm as a sprase matrix
-    ptm = spzeros(Float64, 4^nqubits, 4^nqubits)
+    nqubits = Int(log(2, size(Udag)[1]))
+
+    # Write ptm as a sparse matrix
+    # TODO: Some PTMs can be complex
+    ptm = zeros(ET, 4^nqubits, 4^nqubits)
 
     # The pauli basis vector is defined to be consistent with index of the pstr
-    pauli_basis_vec = constant_pauli_basis_n_qubits(nqubits)
+    pauli_basis_vec = getpaulibasis(nqubits)
 
     # We are taking udag as the actual unitary, and the PTM is defined by
     # evolving P_j and take overlap with P_i
@@ -29,68 +37,32 @@ function calc_ptm_dagmap(udag; tol=1e-15, symmetry=nothing)
     # in the Pauli basis, this is always real.
     for i in 1:4^nqubits
         for j in 1:4^nqubits
-            ptm[i, j] = real(
-                tr(udag * pauli_basis_vec[j] * udag' * pauli_basis_vec[i])
-            )
+            # TODO: real() is a restriction to the input unitary matrix
+            val = tr(U * pauli_basis_vec[j] * Udag * pauli_basis_vec[i])
+
+            if abs(val) < tol
+                continue
+            end
+            ptm[i, j] = ET(val)
         end
     end
-
-    if symmetry != nothing
-        ptm = sparse(inv(symmetry) * ptm * symmetry)
-    end
-
-    droptol!(ptm, tol)  # Here tol is relevant to the input pstr.
 
     return ptm  # return the ptm as a sparse matrix
 end
 
 """
-    function get_ptm_sparse(ptm::SparseMatrixCSC, type::DataType)
+    totransfermap(ptm)
 
-Arguments
-- `ptm::SparseMatrixCSC`: The PTM in sparse matrix format.
-- `type::Function`: The type to apply to the indices of the PTM.
-
-Returns
-- `ptm_map::Vector{Tuple}`: The PTM in a sparse format.
+Computes the Pauli lookup map from a Pauli Transfer Matrix (PTM).
+The PTM should be the matrix representation of a gate in Pauli basis.
+The returned lookup map is a vector of vectors like [(pstr1, coeff1), (pstr2, coeff2), ...]
 """
-function get_ptm_sparse(ptm::SparseMatrixCSC, type)
-    ptm_map = Vector{Tuple}()
-    for j in 1:size(ptm, 2) # loop over columns
-        rows, vals = findnz(view(ptm, :, j))
-        rows = [i - 1 for i in rows] # convert to 0-based indexing used for PP
-        # Create a tuple of the form (p1, c1, p2, c2, ...)
-        column_tuple = Tuple(Iterators.flatten(zip(type.(rows), vals)))
-        push!(ptm_map, column_tuple)
+function totransfermap(ptm::Matrix)
+    col_length = size(ptm)[1]
+    nq = Int(log(4, col_length))
+    lookupmap = Vector{Vector{Tuple{getinttype(nq),eltype(ptm)}}}(undef, col_length)
+    for (colind, colvals) in enumerate(eachcol(ptm))
+        lookupmap[colind] = [(rowind, ptm[rowind, colind]) for (rowind, val) in enumerate(colvals) if val != 0]
     end
-    return ptm_map
+    return lookupmap
 end
-
-"""
-    function get_ptm_sparse(ptm::Array, type::DataType)
-
-Arguments
-- `ptm::Array`: The PTM in matrix format.
-- `type::Function`: The type to apply to the indices of the PTM.
-
-Returns
-- `ptm_map::Vector{Tuple}`: The PTM in a sparse format.
-"""
-function get_ptm_sparse(ptm, type)
-
-    ptm_map = Vector{Tuple}()
-    rows = collect(range(0, size(ptm, 1) - 1)) # convert to 0-based indexing used for PP
-
-    for j in 1:size(ptm, 2) # loop over columns
-
-        # find non-zero elements
-        rows = findall(!iszero, ptm[:, j])
-        vals = ptm[rows, j]
-        rows_0based = [i - 1 for i in rows] # convert to 0-based indexing used for PP
-
-        push!(ptm_map, Tuple(Iterators.flatten(zip(type.(rows_0based), vals))))
-
-    end
-    return ptm_map
-end
-
