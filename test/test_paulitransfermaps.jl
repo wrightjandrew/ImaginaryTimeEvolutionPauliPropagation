@@ -43,6 +43,26 @@ using Test
     end
 end
 
+@testset "Test PTM simulation" begin
+    pauli_rotation = PauliRotation(:X, 1)
+    θ = π / 4
+    U = tomatrix(pauli_rotation, θ)
+    ptm = calculateptm(U)
+    transfer_map = totransfermap(ptm)
+    transfer_map_gate = TransferMapGate([1], transfer_map)
+
+    for symb in [:I, :X, :Y, :Z]
+        pstr = PauliString(1, symb, 1)
+        psum1 = propagate(pauli_rotation, pstr, θ)
+        psum2 = propagate(transfer_map_gate, pstr)
+
+        # it should be zero but we are seeing numerical imprecisions
+        @test PauliPropagation.norm(psum1 - psum2) < 1e-15
+    end
+
+end
+
+
 @testset "Test Transfer Maps and TransferMapGates" begin
     nq = 1
     circuit = [CliffordGate(:H, 1), CliffordGate(:X, 1), CliffordGate(:S, 1)]

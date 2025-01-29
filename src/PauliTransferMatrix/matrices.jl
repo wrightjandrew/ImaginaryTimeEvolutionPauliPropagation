@@ -8,10 +8,10 @@
     function calculateptm(U; tol=1e-15)
 
 Calculate the Pauli Transfer Matrix (PTM) of a unitary matrix.
-Note, by default the PTM is calculated in the Heisenberg picture, 
+Note, by default the PTM is calculated in the -> Heisenberg picture <-, 
 i.e., the PTM is that of the conjugate transpose of the unitary matrix.
 Arguments
-- `U::Array{}`: The unitary matrix for which the PTM is calculated.
+- `U::Matrix`: The unitary matrix for which the PTM is calculated.
 - `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
 
 Returns
@@ -30,8 +30,7 @@ function calculateptm(U; tol=1e-15)
 
     nqubits = Int(log(2, size(Udag)[1]))
 
-    # Write ptm as a sparse matrix
-    # TODO: Some PTMs can be complex
+    # Initialize the PTM
     ptm = zeros(ET, 4^nqubits, 4^nqubits)
 
     # The pauli basis vector is defined to be consistent with index of the pstr
@@ -41,9 +40,11 @@ function calculateptm(U; tol=1e-15)
     # evolving P_j and take overlap with P_i
     # PTM_{ij} = Tr(udag * P_j * udag^{\dagger} * P_i)
     # in the Pauli basis, this is always real.
+    # In the general case of non-unitary matrices, the PTM can be complex.
+    # TODO: Verify exactly when that happens
     for i in 1:4^nqubits
         for j in 1:4^nqubits
-            # TODO: real() is a restriction to the input unitary matrix
+            # TODO: Verify that this is correct for the Heisenberg picture.
             val = tr(Udag * pauli_basis_vec[j] * U * pauli_basis_vec[i])
 
             if abs(val) < tol
