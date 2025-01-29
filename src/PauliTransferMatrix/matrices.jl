@@ -1,17 +1,99 @@
 ###
 ##
-# This file contains implementations of certain unitary gates.
-# Support gates are local unitaries, such as one-qubit, two-qubit Pauli gates.
-# Note our convetion is to define the conjugate transpose of the unitary matrix.
-# In the propagation, the circuit is ran in the reverse order, so defining the
-# conjugate transpose of the unitary matrix is more convenient.
+# This files contains functions to calculate the Pauli Transfer Matrix (PTM) of a unitary matrix.
 ##
 ###
 
-# module unitaries
+"""
+    function calculateptm(U; tol=1e-15)
 
-using LinearAlgebra
+Calculate the Pauli Transfer Matrix (PTM) of a unitary matrix in sparse format.
+Note, by default the PTM is calculated in the Heisenberg picture, 
+i.e., the PTM is that of the conjugate transpose of the unitary matrix.
+Arguments
+- `U::Array{}`: The unitary matrix for which the PTM is calculated.
+- `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
 
+Returns
+- `ptm::Matrix`: The PTM of the conjugate transpose of unitary matrix `U`.
+"""
+function calculateptm(U; tol=1e-15)
+    Udag = U'
+    if Udag * U ≈ U * Udag ≈ I
+        # The matrix is unitary, so the PTM is real
+        ET = Float64
+    else
+        # The matrix is not unitary, so the PTM can be complex
+        ET = ComplexF64
+    end
+
+
+    nqubits = Int(log(2, size(Udag)[1]))
+
+    # Write ptm as a sparse matrix
+    # TODO: Some PTMs can be complex
+    ptm = zeros(ET, 4^nqubits, 4^nqubits)
+
+    # The pauli basis vector is defined to be consistent with index of the pstr
+    pauli_basis_vec = getpaulibasis(nqubits)
+
+    # We are taking udag as the actual unitary, and the PTM is defined by
+    # evolving P_j and take overlap with P_i
+    # PTM_{ij} = Tr(udag * P_j * udag^{\dagger} * P_i)
+    # in the Pauli basis, this is always real.
+    for i in 1:4^nqubits
+        for j in 1:4^nqubits
+            # TODO: real() is a restriction to the input unitary matrix
+            val = tr(Udag * pauli_basis_vec[j] * U * pauli_basis_vec[i])
+
+            if abs(val) < tol
+                continue
+            end
+            ptm[i, j] = ET(val)
+        end
+    end
+
+    return ptm  # return the ptm as a sparse matrix
+end
+
+
+"""
+    tomatrix(gate::PauliRotation, theta)
+
+Compute the unitary matrix for the `PauliRotation` gate with parameter `theta` in the computational 0/1 basis.
+"""
+function tomatrix(gate::PauliRotation, theta)
+
+    nqubits = length(gate.qinds)
+    pauli_basis_vec = getpaulibasis(nqubits)
+
+    # The indices of the pauli matrix are sorted in ascending order
+    sorted_indices = sortperm(gate.qinds)
+    pauli = gate.symbols[sorted_indices]
+
+    # These pauli matrices are normalized by sqrt(2)^nqubits
+    pauli_mat = sqrt(2)^nqubits * pauli_basis_vec[symboltoint(pauli)+1]
+
+    id = I(2^nqubits)
+
+    U = cos(theta / 2) * id - 1.0im * sin(theta / 2) * pauli_mat
+
+    return U
+end
+
+
+"""
+    tomatrix(gate::TGate)
+
+Compute the unitary matrix for a `TGate`.
+"""
+function tomatrix(::TGate)
+    return _tgate_unitary
+end
+
+const _tgate_unitary = [[1 0]; [0 exp(1.0im * pi / 4)]]
+
+## Pauli basis matrices
 const Idmat = [1 0; 0 1]
 const Xmat = [0 1; 1 0]
 const Ymat = [0 -1im; 1im 0]
@@ -20,7 +102,6 @@ const Zmat = [1 0; 0 -1]
 const pauli_basis = [Idmat / sqrt(2), Xmat / sqrt(2), Ymat / sqrt(2), Zmat / sqrt(2)]
 
 const _nqubit_pauli_matrices = Dict{Int,Vector{Matrix{ComplexF64}}}(1 => pauli_basis)
-
 
 """
     getpaulimatrices(nq::Int)
@@ -56,49 +137,4 @@ function _computepaulimatrices(nq::Int)
         end
         return basis
     end
-end
-
-
-"""
-    tomatrix(gate::PauliRotation, params)
-
-Compute the conjugate transpose of the unitary matrix for the PauliRotation gate.
-
-Arguments
-- `gate::PauliRotation`: The PauliRotation gate.
-- `params::Vector{Float64}`: A length-1 parameter for the gate.
-
-Returns 
-- `U::Array{ComplexF64}`: The conjugate transpose of the unitary matrix.
-"""
-function tomatrix(gate::PauliRotation, theta)
-
-    nqubits = length(gate.qinds)
-    pauli_basis_vec = getpaulibasis(nqubits)
-
-    # The indices of the pauli matrix are sorted in ascending order
-    sorted_indices = sortperm(gate.qinds)
-    pauli = gate.symbols[sorted_indices]
-
-    # These pauli matrices are normalized by sqrt(2)^nqubits
-    pauli_mat = sqrt(2)^nqubits * pauli_basis_vec[symboltoint(pauli)+1]
-
-    id = I(2^nqubits)
-
-    U = cos(theta / 2) * id - 1.0im * sin(theta / 2) * pauli_mat
-
-    return U
-end
-
-
-"""
-    tomatrix(gate::TGate)
-
-Compute the unitary matrix for a T gate.
-"""
-function tomatrix(::TGate)
-
-    U = [[1 0]; [0 exp(1.0im * pi / 4)]]
-
-    return U
 end

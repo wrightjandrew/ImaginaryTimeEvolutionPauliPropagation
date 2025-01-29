@@ -1,59 +1,37 @@
-"""
-    function calculateptm(U; tol=1e-15)
+###
+##
+# This file contains functions to convert a circuit or a PTM to a transfer map.
+##
+###
 
-Calculate the Pauli Transfer Matrix (PTM) of a unitary matrix in sparse format.
-Note, by default the PTM is calculated in the Heisenberg picture, 
-i.e., the PTM is that of the conjugate transpose of the unitary matrix.
-Arguments
-- `U::Array{}`: The unitary matrix for which the PTM is calculated.
-- `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
-
-Returns
-- `ptm::Matrix`: The PTM of the conjugate transpose of unitary matrix `U`.
 """
-function calculateptm(U; tol=1e-15)
-    Udag = U'
-    if Udag * U ≈ U * Udag ≈ I
-        # The matrix is unitary, so the PTM is real
-        ET = Float64
-    else
-        # The matrix is not unitary, so the PTM can be complex
-        ET = ComplexF64
+    totransfermap(circuit::Vector{<:StaticGate}, nq::Integer)
+
+Computes the Pauli transfer map from a circuit consisting of non-parametrized `StaticGate`s.
+The returned lookup map is a vector of vectors like [(pstr1, coeff1), (pstr2, coeff2), ...]
+"""
+function totransfermap(circuit, nq::Integer)
+    if !(all([isa(gate, StaticGate) for gate in circuit]))
+        throw(ArgumentError("All gates in the circuit must be non-parametrized `StaticGate`s."))
     end
 
+    TermType = getinttype(nq)
 
-    nqubits = Int(log(2, size(Udag)[1]))
+    # max integer to feed into the circuit
+    max_integer = 4^nq - 1
 
-    # Write ptm as a sparse matrix
-    # TODO: Some PTMs can be complex
-    ptm = zeros(ET, 4^nqubits, 4^nqubits)
+    # Do one propagation per initial Pauli string on the number of qubits (can be very expensive)
+    psums = [propagate(circuit, PauliString(nq, TermType(ii), 1.0); min_abs_coeff=0) for ii in 0:max_integer]
 
-    # The pauli basis vector is defined to be consistent with index of the pstr
-    pauli_basis_vec = getpaulibasis(nqubits)
+    # Convert our transfer map style, i.e., vector of vector of tuples
+    return [[(TermType(paulis), coeff) for (paulis, coeff) in psum] for psum in psums]
 
-    # We are taking udag as the actual unitary, and the PTM is defined by
-    # evolving P_j and take overlap with P_i
-    # PTM_{ij} = Tr(udag * P_j * udag^{\dagger} * P_i)
-    # in the Pauli basis, this is always real.
-    for i in 1:4^nqubits
-        for j in 1:4^nqubits
-            # TODO: real() is a restriction to the input unitary matrix
-            val = tr(Udag * pauli_basis_vec[j] * U * pauli_basis_vec[i])
-
-            if abs(val) < tol
-                continue
-            end
-            ptm[i, j] = ET(val)
-        end
-    end
-
-    return ptm  # return the ptm as a sparse matrix
 end
 
 """
-    totransfermap(ptm)
+    totransfermap(ptm::Matrix)
 
-Computes the Pauli lookup map from a Pauli Transfer Matrix (PTM).
+Computes the Pauli transfer map from a Pauli Transfer Matrix (PTM).
 The PTM should be the matrix representation of a gate in Pauli basis.
 The returned lookup map is a vector of vectors like [(pstr1, coeff1), (pstr2, coeff2), ...]
 """
