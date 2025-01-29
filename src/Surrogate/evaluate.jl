@@ -7,7 +7,7 @@ Evaluate the expectation value of a Surrogate by evaluating all involved circuit
 function evaluate!(psum::PauliSum{TT,NodePathProperties}, thetas) where {TT}
     reset!(psum)
     @sync for (_, pth) in psum
-        @spawn _traceevalorder(pth.coeff, thetas)
+        @spawn _traceevalorder(pth.node, thetas)
     end
     return psum
 end
@@ -21,7 +21,7 @@ Reset the nodes in a the Surrogate. Needs to be done in-between evaluatios with 
 """
 function reset!(psum::PauliSum{TT,CT}) where {TT,CT<:NodePathProperties}
     @sync for (_, pth) in psum
-        @spawn reset!(pth.coeff)
+        @spawn reset!(pth.node)
     end
     return
 end
@@ -63,7 +63,7 @@ NOTE: This requires calling `resetnodes` in-between evaluations with different `
 `eval_list` does not need to be passed when manually using this function.
 """
 function _traceevalorder(node::PauliRotationNode, thetas; eval_list=nothing)
-    val = typeof(node.cummulative_value)(0)
+    val = zero(node.cummulative_value)
 
     if isevaluated(node)
         return node.cummulative_value

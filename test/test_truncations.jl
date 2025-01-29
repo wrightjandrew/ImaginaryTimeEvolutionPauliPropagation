@@ -35,7 +35,7 @@ end
     evolved_p = propagate(
         circ, pstr, thetas;
         max_weight=W, min_abs_coeff=min_abs_coeff,
-        customtruncatefn=truncategamma
+        customtruncfunc=truncategamma
     )
     # \gamma=0 == zero dissipation
     @test isapprox(overlapwithzero(evolved_p), expected_expval)
@@ -48,7 +48,7 @@ end
     evolved_p = propagate(
         circ, pstr, thetas;
         max_weight=W, min_abs_coeff=min_abs_coeff,
-        customtruncatefn=truncategamma
+        customtruncfunc=truncategamma
     )
     # \gamma=0.1 \approx zero dissipation
     #TODO: is there another way to test dissipation?

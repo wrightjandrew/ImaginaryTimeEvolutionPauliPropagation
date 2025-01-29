@@ -29,12 +29,16 @@ end
 
 
 """
-    truncatemincoeff(path_property::NumericPathProperties, min_abs_coeff::Real)
+    truncatemincoeff(path_property::PathProperties, min_abs_coeff::Real)
 
 Return `true` if `abs(path_property.coeff) < min_abs_coeff`. 
 """
-function truncatemincoeff(path_property::NumericPathProperties, min_abs_coeff::Real)
-    return abs(path_property.coeff) < min_abs_coeff
+function truncatemincoeff(path_property::PProp, min_abs_coeff::Real) where {PProp<:PathProperties}
+    if hasfield(PProp, :coeff)
+        return abs(path_property.coeff) < min_abs_coeff
+    else
+        return false
+    end
 end
 
 
@@ -52,8 +56,12 @@ end
 
 Return `true` if  `path_properties.freq > max_freq`.
 """
-function truncatefrequency(path_properties::PathProperties, max_freq::Real)
-    return path_properties.freq > max_freq
+function truncatefrequency(path_properties::PProp, max_freq::Real) where {PProp<:PathProperties}
+    if hasfield(PProp, :freq)
+        return path_properties.freq > max_freq
+    else
+        return false
+    end
 end
 
 """
@@ -69,8 +77,12 @@ end
 
 Return `true` if  `path_properties.nsins > max_sins`.
 """
-function truncatesins(path_properties::PathProperties, max_sins::Real)
-    return path_properties.nsins > max_sins
+function truncatesins(path_properties::PProp, max_sins::Real) where {PProp<:PathProperties}
+    if hasfield(PProp, :nsins)
+        return path_properties.nsins > max_sins
+    else
+        return false
+    end
 end
 
 # Custom truncation function
@@ -113,8 +125,8 @@ The damping factor `gamma` controls the exponential decay.
 truncatedampingcoeff(pstr, 0.8, 0.5, 0.01)
 """
 function truncatedampingcoeff(
-    pstr::PauliStringType, coeff::Real, gamma::Real, min_abs_coeff::Real
+    pstr::PauliStringType, coeff, gamma::Real, min_abs_coeff::Real
 )
 
-    return abs(coeff) * exp(-gamma * countweight(pstr)) < min_abs_coeff
+    return abs(tonumber(coeff)) * 10.0^(-gamma * countweight(pstr)) < min_abs_coeff
 end

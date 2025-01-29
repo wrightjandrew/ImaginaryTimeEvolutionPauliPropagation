@@ -9,7 +9,6 @@ export
     PauliType,
     PauliSum,
     PauliString,
-    term,
     paulis,
     coefficients,
     norm,
@@ -18,12 +17,11 @@ export
     numcoefftype,
     getcoeff,
     topaulistrings,
-    add,
     add!,
-    subtract,
-    subtract!,
     set!,
     empty!,
+    identitypauli,
+    identitylike,
     inttosymbol,
     symboltoint,
     inttostring,
@@ -40,12 +38,6 @@ export
     commutator,
     getinttype
 
-
-include("pathproperties.jl")
-export
-    PathProperties,
-    NumericPathProperties,
-    wrapcoefficients
 
 include("Gates/Gates.jl")
 export
@@ -70,25 +62,42 @@ export
     freeze,
     TGate
 
-include("circuits.jl")
+include("Circuits/Circuits.jl")
 export
     countparameters,
+    getparameterindices,
     bricklayertopology,
     staircasetopology,
-    get2dtopology,
-    get2dstaircasetopology,
+    rectangletopology,
+    staircasetopology2d,
+    ibmeagletopology,
     hardwareefficientcircuit,
     efficientsu2circuit,
     tfitrottercircuit,
     tiltedtfitrottercircuit,
     heisenbergtrottercircuit,
-    su4ansatz,
-    qcnnansatz,
+    su4circuit,
+    qcnncircuit,
     appendSU4!,
-    ibmeagletopology
+    rxlayer!,
+    rylayer!,
+    rzlayer!,
+    rxxlayer!,
+    ryylayer!,
+    rzzlayer!
+
+include("PathProperties/PathProperties.jl")
+export
+    PathProperties,
+    PauliFreqTracker,
+    wrapcoefficients
 
 include("truncations.jl")
 export
+    truncateweight,
+    truncatemincoeff,
+    truncatefrequency,
+    truncatesins,
     truncatedampingcoeff
 
 include("Propagation/Propagation.jl")
@@ -131,10 +140,8 @@ export
 
 include("numericalcertificates.jl")
 export
-    estimateaverageerror,
-    estimateaverageerror!,
-    montecarlopropagation,
-    mcapply
+    estimatemse,
+    estimatemse!
 
 include("Surrogate/Surrogate.jl")
 export

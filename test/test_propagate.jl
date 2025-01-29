@@ -24,7 +24,7 @@ function hybridPP(nq, nl, W, min_abs_coeff, max_freq)
 
     pstr = PauliString(nq, :Z, round(Int, nq / 2))
 
-    wrapped_pstr = wrapcoefficients(pstr, NumericPathProperties)
+    wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
 
     topo = bricklayertopology(nq; periodic=false)
     circ = hardwareefficientcircuit(nq, nl; topology=topo)
@@ -59,4 +59,86 @@ function surrogatePP(nq, nl, W, max_freq)
     evaluate!(dsym, thetas)
 
     return overlapwithzero(dsym)
+end
+
+@testset "Test propagate equivalence" begin
+    nq = 6
+    nl = 3
+
+    topology = rectangletopology(2, 3; periodic=true)
+    circ = efficientsu2circuit(nq, nl; topology=topology)
+
+    nparams = countparameters(circ)
+
+    ## Test weight truncation
+    for max_weight in (0, 1, 3, 6)
+        thetas = randn(nparams)
+
+        pstr = PauliString(nq, rand([:I, :X, :Y, :Z]), rand(1:nq))
+        dnum = propagate(circ, pstr, thetas; min_abs_coeff=0, max_weight=max_weight)
+
+        wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
+        dhyb = propagate(circ, wrapped_pstr, thetas; min_abs_coeff=0, max_weight=max_weight)
+
+        surrogate_pstr = wrapcoefficients(pstr, NodePathProperties)
+        dsym = propagate(circ, surrogate_pstr; max_weight=max_weight)
+        evaluate!(dsym, thetas)
+
+        @test overlapwithzero(dnum) ≈ overlapwithzero(dhyb) ≈ overlapwithzero(dsym)
+        @test overlapwithplus(dnum) ≈ overlapwithplus(dhyb) ≈ overlapwithplus(dsym)
+    end
+
+    # Test frequency truncation
+    for max_freq in (0, 2, 5, 10)
+        thetas = randn(nparams)
+
+        pstr = PauliString(nq, rand([:I, :X, :Y, :Z]), rand(1:nq))
+
+        wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
+        dhyb = propagate(circ, wrapped_pstr, thetas; min_abs_coeff=0, max_freq=max_freq)
+
+        surrogate_pstr = wrapcoefficients(pstr, NodePathProperties)
+        dsym = propagate(circ, surrogate_pstr; max_freq=max_freq)
+        evaluate!(dsym, thetas)
+
+        @test overlapwithzero(dhyb) ≈ overlapwithzero(dsym)
+        @test overlapwithplus(dhyb) ≈ overlapwithplus(dsym)
+    end
+
+    # Test max sins/ small-angle truncation
+    for max_sins in (0, 2, 5, 10)
+        thetas = randn(nparams)
+
+        pstr = PauliString(nq, rand([:I, :X, :Y, :Z]), rand(1:nq))
+
+        wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
+        dhyb = propagate(circ, wrapped_pstr, thetas; min_abs_coeff=0, max_sins=max_sins)
+
+        surrogate_pstr = wrapcoefficients(pstr, NodePathProperties)
+        dsym = propagate(circ, surrogate_pstr; max_sins=max_sins)
+        evaluate!(dsym, thetas)
+
+        @test overlapwithzero(dhyb) ≈ overlapwithzero(dsym)
+        @test overlapwithplus(dhyb) ≈ overlapwithplus(dsym)
+    end
+
+
+    # Test min_abs_coeff truncation
+    nl = 5
+    circ = efficientsu2circuit(nq, nl; topology=topology)
+    nparams = countparameters(circ)
+
+    for min_abs_coeff in (1e-3, 1e-2, 1e-1)
+        thetas = randn(nparams)
+
+        pstr = PauliString(nq, rand([:X, :Y, :Z]), rand(1:nq))
+        dnum = propagate(circ, pstr, thetas; min_abs_coeff=min_abs_coeff)
+
+        wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
+        dhyb = propagate(circ, wrapped_pstr, thetas; min_abs_coeff=min_abs_coeff)
+
+        @test overlapwithzero(dnum) ≈ overlapwithzero(dhyb)
+        @test overlapwithplus(dnum) ≈ overlapwithplus(dhyb)
+    end
+
 end

@@ -224,7 +224,7 @@ end
 Calculate the commutator of two `PauliString`s.
 """
 function commutator(pstr1::PauliString, pstr2::PauliString)
-    new_coeff, new_pstr = commutator(pstr1.term, pstr2.term)
+    new_pstr, new_coeff = commutator(pstr1.term, pstr2.term)
     return PauliString(pstr1.nqubits, new_pstr, new_coeff)
 end
 
@@ -250,15 +250,15 @@ Returns a tuple of the coefficient and the potentially integer Pauli string.
 The coefficient is zero if the Pauli strings commute.
 """
 function commutator(pstr1::PauliStringType, pstr2::PauliStringType)
-    # TODO: adapt order of outputs.
+
     if commutes(pstr1, pstr2)
         total_sign = ComplexF64(0.0)
-        new_pstr = zero(typeof(pstr1))
+        new_pstr = identitylike(pstr1)
     else
-        total_sign, new_pstr = pauliprod(pstr1, pstr2)
+        new_pstr, total_sign = pauliprod(pstr1, pstr2)
     end
     # commutator is [A, B] = AB - BA = 2AB for non-commuting (meaning anti-commuting) Paulis
-    return 2 * total_sign, new_pstr
+    return new_pstr, 2 * total_sign
 end
 
 
@@ -274,7 +274,7 @@ function commutator(psum1::Dict{TT,CT1}, psum2::Dict{TT,CT2}) where {TT,CT1,CT2}
 
     for (pauli1, coeff1) in psum1, (pauli2, coeff2) in psum2
         if !commutes(pauli1, pauli2)
-            sign, new_pstr = commutator(pauli1, pauli2)
+            new_pstr, sign = commutator(pauli1, pauli2)
             new_pauli_dict[new_pstr] = get(new_pauli_dict, new_pstr, ComplexF64(0.0)) + sign * coeff1 * coeff2
         end
     end
@@ -298,8 +298,8 @@ Calculate the product of two `PauliString`s. For example `X*Y = iZ`.
 """
 function pauliprod(pstr1::PauliString, pstr2::PauliString)
     _checknumberofqubits(pstr1, pstr2)
-    sign, coeff = pauliprod(pstr1.term, pstr2.term)
-    return PauliString(pstr1.nqubits, coeff, sign * pstr1.coeff * pstr2.coeff)
+    new_pstr, sign = pauliprod(pstr1.term, pstr2.term)
+    return PauliString(pstr1.nqubits, new_pstr, sign * pstr1.coeff * pstr2.coeff)
 end
 
 """
@@ -311,7 +311,7 @@ function pauliprod(pauli1::PauliStringType, pauli2::PauliStringType)
     # This function is for when we need to globally check the sign of the product (like in general products of Paulis, not local Pauli gates)
     pauli3 = _bitpaulimultiply(pauli1, pauli2)
     sign = calculatesign(pauli1, pauli2, pauli3)
-    return sign, pauli3
+    return pauli3, sign
 end
 
 """
@@ -353,7 +353,7 @@ function pauliprod(pauli1::PauliStringType, pauli2::PauliStringType, changed_ind
     # Calculate the Pauli product when you know on which sites the Paulis differ (changed_indices)
     pauli3 = _bitpaulimultiply(pauli1, pauli2)
     sign = calculatesign(pauli1, pauli2, pauli3, changed_indices)
-    return sign, pauli3
+    return pauli3, sign
 end
 
 """

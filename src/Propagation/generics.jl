@@ -5,48 +5,54 @@
 ##
 ###
 """
-    propagate(circ, pstr::PauliString, thetas=nothing; kwargs...)
+    propagate(circ, pstr::PauliString, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
 Propagate a `PauliString` through the circuit `circ` in the Heisenberg picture. 
 This means that the circuit is applied to the Pauli string in reverse order, and the action of each gate is its conjugate action.
 Parameters for the parametrized gates in `circ` are given by `thetas`, and need to be passed as if the circuit was applied as written in the Schrödinger picture.
 If thetas are not passed, the circuit must contain only non-parametrized `StaticGates`.
-`kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Default truncations are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
+`max_freq`, and `max_sins` can only be used with `PauliFreqTracker` coefficients.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate(circ, pstr::PauliString, thetas=nothing; kwargs...)
+function propagate(circ, pstr::PauliString, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
     psum = PauliSum(pstr.nqubits, pstr)
-    return propagate(circ, psum, thetas; kwargs...)
+    return propagate(circ, psum, thetas; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, kwargs...)
 end
 
 """
-    propagate(circ, psum::PauliSum, thetas=nothing; kwargs...)
+    propagate(circ, psum::PauliSum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
 Propagate a `PauliSum` through the circuit `circ` in the Heisenberg picture. 
 This means that the circuit is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 Parameters for the parametrized gates in `circ` are given by `thetas`, and need to be passed as if the circuit was applied as written in the Schrödinger picture.
 If thetas are not passed, the circuit must contain only non-parametrized `StaticGates`.
-`kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Default truncations are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
+`max_freq`, and `max_sins` can only be used with `PauliFreqTracker` coefficients.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate(circ, psum, thetas=nothing; kwargs...)
-    psum = propagate!(circ, deepcopy(psum), thetas; kwargs...)
+function propagate(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
+    psum = propagate!(circ, deepcopy(psum), thetas; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, kwargs...)
     return psum
 end
 
 
 """
-    propagate!(circ, psum::PauliSum, thetas=nothing; kwargs...)
+    propagate!(circ, psum::PauliSum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
 Propagate a Pauli sum  through the circuit `circ` in the Heisenberg picture. 
 This means that the circuit is applied to the Pauli sum in reverse order, and the action of each gate is its conjugate action.
 The input `psum` will be modified.
 Parameters for the parametrized gates in `circ` are given by `thetas`, and need to be passed as if the circuit was applied as written in the Schrödinger picture.
 If thetas are not passed, the circuit must contain only non-parametrized `StaticGates`.
-`kwargs` are passed to the truncation function. Supported by default are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+Default truncations are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
+`max_freq`, and `max_sins` can only be used with `PauliFreqTracker` coefficients.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
+Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate!(circ, psum, thetas=nothing; kwargs...)
+function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
     # if circ is actually a single gate, promote it to a list [gate]
     # similarly the theta if it is a single number
@@ -67,21 +73,20 @@ function propagate!(circ, psum, thetas=nothing; kwargs...)
     # - verbose option  
     # - more elegant param_idx incrementation
     for gate in reverse(circ)
-        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; kwargs...)
+        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, kwargs...)
     end
     return psum
 end
 
 
 """
-    applymergetruncate!(gate, psum, aux_psum, thetas, param_idx, args...; kwargs...)
+    applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
 1st-level function below `propagate!` that applies one gate to all Pauli strings in `psum`, potentially using `aux_psum` in the process,
 and merges everything back into `psum`. Truncations are checked here after merging.
 This function can be overwritten for a custom gate if the lower-level functions `applytoall!`, `applyandadd!`, and `apply` are not sufficient.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
 """
-function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx, args...; kwargs...)
+function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
     # Pick out the next theta if gate is a ParametrizedGate.
     # Else set the paramter to nothing for clarity that theta is not used.
@@ -102,13 +107,13 @@ function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx, args...; k
     psum, aux_psum = mergeandempty!(psum, aux_psum)
 
     # Check truncation conditions on all Pauli strings in psum and remove them if they are truncated.
-    checktruncationonall!(psum; kwargs...)
+    checktruncationonall!(psum; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc)
 
     return psum, aux_psum, param_idx
 end
 
 """
-    applytoall!(gate, theta psum, output_psum, args...; kwargs...)
+    applytoall!(gate, theta psum, output_psum; kwargs...)
 
 2nd-level function below `applymergetruncate!` that applies one gate to all Pauli strings in `psum`, moving results into `output_psum` by default.
 After this functions, Pauli strings in remaining in `psum` and `output_psum` are merged.
@@ -116,7 +121,7 @@ This function can be overwritten for a custom gate if the lower-level functions 
 In particular, this function can be used to manipulate both `psum` and `output_psum` at the same time to reduce memory movement.
 Note that manipulating `psum` on anything other than the current Pauli string will likely lead to errors.
 """
-function applytoall!(gate, theta, psum, output_psum, args...; kwargs...)
+function applytoall!(gate, theta, psum, output_psum; kwargs...)
 
     # Loop over all Pauli strings in psum and apply the gate to them.
     for (pstr, coeff) in psum
@@ -131,14 +136,14 @@ function applytoall!(gate, theta, psum, output_psum, args...; kwargs...)
 end
 
 """
-    applyandadd!(gate, pstr, coefficient, theta, output_psum, args...; kwargs...)
+    applyandadd!(gate, pstr, coefficient, theta, output_psum; kwargs...)
 
 3rd-level function below `applymergetruncate!` that applies one gate to one Pauli string in `psum`, moving results into `output_psum` by default.
 This function can be overwritten for a custom gate if the lower-level function `apply` is not sufficient. 
 This is likely the the case if `apply` is not type-stable because it does not return a unique number of outputs. 
 E.g., a Pauli gate returns 1 or 2 (pstr, coefficient) outputs.
 """
-@inline function applyandadd!(gate, pstr, coeff, theta, output_psum, args...; kwargs...)
+@inline function applyandadd!(gate, pstr, coeff, theta, output_psum; kwargs...)
 
     # Get the (potentially new) pauli strings and their coefficients like (pstr1, coeff1, pstr2, coeff2, ...)
     pstrs_and_coeffs = apply(gate, pstr, coeff, theta; kwargs...)
@@ -154,7 +159,6 @@ E.g., a Pauli gate returns 1 or 2 (pstr, coefficient) outputs.
 end
 
 ## Re-route apply() for StaticGates to a version without theta. Works either way if manually defined.
-# TODO: swith around theta and coefficient arguments everywhere in apply()
 """
     apply(gate::StaticGate, pstr, coeff, theta)
 
@@ -205,7 +209,7 @@ end
 
 Check truncation conditions on all Pauli strings in `psum` and remove them if they are truncated.
 This function supports the default truncations based on `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
 """
 function checktruncationonall!(
     psum; max_weight::Real=Inf, min_abs_coeff=1e-10, max_freq::Real=Inf,
@@ -230,18 +234,18 @@ end
     psum, pstr, coeff;
     max_weight::Real=Inf, min_abs_coeff=1e-10,
     max_freq::Real=Inf, max_sins::Real=Inf,
-    customtruncatefn=nothing,
+    customtruncfunc=nothing,
     kwargs...
 
 Check truncation conditions one Pauli string in `psum` and it them if it is truncated.
 This function supports the default truncations based on `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins`.
-A custom truncation function can be passed as `customtruncatefn` with the signature customtruncatefn(pstr::PauliStringType, coefficient)::Bool.
+A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
 """
 @inline function checktruncationonone!(
     psum, pstr, coeff;
     max_weight::Real=Inf, min_abs_coeff=1e-10,
     max_freq::Real=Inf, max_sins::Real=Inf,
-    customtruncatefn=nothing,
+    customtruncfunc=nothing,
     kwargs...
 )
     is_truncated = false
@@ -253,7 +257,7 @@ A custom truncation function can be passed as `customtruncatefn` with the signat
         is_truncated = true
     elseif truncatesins(coeff, max_sins)
         is_truncated = true
-    elseif !isnothing(customtruncatefn) && customtruncatefn(pstr, coeff)
+    elseif !isnothing(customtruncfunc) && customtruncfunc(pstr, coeff)
         is_truncated = true
     end
     if is_truncated

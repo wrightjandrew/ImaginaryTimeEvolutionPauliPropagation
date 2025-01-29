@@ -1,6 +1,36 @@
 # Defines mapping of integers 0, 1, 2, 3 to symbols :I, :X, :Y, :Z
 const pauli_symbols::Vector{Symbol} = [:I, :X, :Y, :Z]
 
+
+"""
+    identitypauli(nqubits::Integer)
+
+Returns the integer representation of the identity Pauli string acting on `nqubits` qubits.
+The type of will be the smallest integer type that can hold the number of qubits, as given by `getinttype(nqubits)`.
+"""
+function identitypauli(nqubits::Integer)
+    return identitypauli(getinttype(nqubits))
+end
+
+"""
+    identitypauli(TermType<:PauliStringType)
+
+Returns the integer representation of the identity Pauli string with type `TermType`.
+"""
+function identitypauli(::Type{TT}) where {TT<:PauliStringType}
+    return zero(TT)
+end
+
+"""
+    identitylike(pstr::PauliStringType)
+
+Returns an integer Pauli string of the same type as `pstr` with all Paulis set to identity.
+"""
+function identitylike(pstr::TT) where {TT<:PauliStringType}
+    return identitypauli(TT)
+end
+
+
 """
     symboltoint(pstr::Union{Vector{Symbol}, Symbol})
 
@@ -17,7 +47,7 @@ symboltoint([:X, :I])
 """
 function symboltoint(pstr)
     nqubits = length(pstr)
-    converted_pstr = getinttype(nqubits)(0)
+    converted_pstr = identitypauli(nqubits)
     for (qind, pauli) in enumerate(pstr)
         converted_pstr = setpauli(converted_pstr, pauli, qind)
     end
@@ -25,17 +55,20 @@ function symboltoint(pstr)
 end
 
 """
-    symboltoint(nqubits::Integer, pstr::Vector{Symbol}, qinds::Vector{Int})
+    symboltoint(nqubits::Integer, paulis::Vector{Symbol}, qinds::Vector{Int})
 
 Maps a vector of symbols `pstr` acting on the indices `qinds` to an integer Pauli string. Other sites are set to the identity.
 `qinds` can be any iterable.
 """
-function symboltoint(nqubits::Integer, pstr, qinds)
+function symboltoint(nqubits::Integer, paulis, qinds)
+    if length(paulis) != length(qinds)
+        throw(ArgumentError("Length of `paulis=$(length(paulis))` and `qinds`=$(length(qinds)) should be the same."))
+    end
     if nqubits < maximum(qinds)
         throw(ArgumentError("Indices in `qinds`=$qinds acts on more qubits than `nqubits`=$nqubits."))
     end
-    inttype = getinttype(nqubits)
-    return symboltoint(inttype, pstr, qinds)
+    TT = getinttype(nqubits)
+    return symboltoint(TT, paulis, qinds)
 end
 
 """
@@ -55,21 +88,21 @@ Maps a single symbol `pauli` acting on the index `qind` to an integer Pauli stri
 Other sites are set to the identity.
 """
 function symboltoint(::Type{TT}, pauli::Symbol, qind::Integer) where {TT<:PauliStringType}
-    converted_pauli = zero(TT)
+    converted_pauli = identitypauli(TT)
     converted_pauli = setpauli(converted_pauli, pauli, qind)
     return converted_pauli
 end
 
 """
-    symboltoint(::TermType, pstr, qinds)
+    symboltoint(::TermType, paulis, qinds)
 
-Maps a vector of symbols `pstr` acting on the indices `qinds` to an integer Pauli string with type `TermType`.
+Maps a vector of symbols `paulis` acting on the indices `qinds` to an integer Pauli string with type `TermType`.
 Other sites are set to the identity.
 `qinds` can be any iterable.
 """
-function symboltoint(::Type{TT}, pstr, qinds) where {TT<:PauliStringType}
-    converted_pstr = zero(TT)
-    for (qind, pauli) in zip(qinds, pstr)
+function symboltoint(::Type{TT}, paulis, qinds) where {TT<:PauliStringType}
+    converted_pstr = identitypauli(TT)
+    for (qind, pauli) in zip(qinds, paulis)
         converted_pstr = setpauli(converted_pstr, pauli, qind)
     end
     return converted_pstr
@@ -120,7 +153,7 @@ end
 Gets the Paulis on indices `qinds` of a `pstr` in the integer representation.
 """
 function getpauli(pstr::PauliStringType, qinds)
-    new_pstr = zero(pstr)
+    new_pstr = identitylike(pstr)
     # Get the Paulis on the indices `qinds`
     for (ii, qind) in enumerate(qinds)
         pauli = getpauli(pstr, qind)
@@ -160,6 +193,7 @@ end
     )
 
 Set the Paulis `qinds` of an integer Pauli string `pstr` to `target_paulis`.
+Use Tuples for `qinds` in performance critical functions because they are immutable.
 """
 function setpauli(pstr::PauliStringType, target_paulis::PauliStringType, qinds)
     for (ii, qind) in enumerate(qinds)
@@ -177,6 +211,7 @@ end
 
 Set the Paulis `qinds` of an integer Pauli string `pstr` to `target_paulis`.
 `target_paulis` is a vector of symbols.
+Use tuples in performance critical functions because they are immutable.
 """
 function setpauli(pstr::PauliStringType, target_paulis, qinds)
     for (ii, qind) in enumerate(qinds)
@@ -197,6 +232,7 @@ inttostring(pstr::PauliType, nqubits::Integer) = prod("$(inttosymbol(getpauli(ps
 Pretty string function.
 """
 function _getprettystr(psum::Dict, nqubits::Int; max_lines=20)
+    # TODO: rework this pretty print to not build the string but keep streaming via show(io, ...)
     str = ""
     header = length(psum) == 1 ? "1 Pauli term: \n" : "$(length(psum)) Pauli terms:\n"
     str *= header
@@ -213,14 +249,15 @@ function _getprettystr(psum::Dict, nqubits::Int; max_lines=20)
         end
         if isa(coeff, Number)
             coeff_str = round(coeff, sigdigits=5)
-        elseif isa(coeff, PathProperties)
+        elseif isa(coeff, PathProperties) && hasfield(typeof(coeff), :coeff)
+            PProp = string(typeof(coeff).name.name)
             if isa(coeff.coeff, Number)
-                coeff_str = "PathProperty($(round(coeff.coeff, sigdigits=5)))"
+                coeff_str = "$PProp($(round(coeff.coeff, sigdigits=5)))"
             else
-                coeff_str = "PathProperty($(typeof(coeff.coeff)))"
+                coeff_str = "$PProp($(typeof(coeff.coeff)))"
             end
         else
-            coeff_str = "($(typeof(coeff)))"
+            coeff_str = "$(typeof(coeff))"
         end
         new_str = " $(coeff_str) * $(pauli_string)\n"
         str *= new_str

@@ -22,7 +22,7 @@ function getinttype(nqubits::Integer)
         inttype = UInt128
     elseif nbits <= 256    # we have a custom hash function for these
         inttype = UInt256
-    elseif nbits <= 1024
+    elseif nbits <= 2_048
         inttype = BigInt  # TODO: get larger Integer types that aren't BigInt
     else
         throw("The maximum number of qubits supported is currently 1024.")
@@ -272,7 +272,7 @@ end
 
     # length is the number of bits in the integer
     n_bits = min(bitsize(pstr), 2_048)  # for max 1024 qubits.
-    mask = pstr(0)
+    mask = zero(pstr)
     for ii in 0:(n_bits-1)
         if ii % 2 == 0
             mask = _setbittoone(mask, ii)

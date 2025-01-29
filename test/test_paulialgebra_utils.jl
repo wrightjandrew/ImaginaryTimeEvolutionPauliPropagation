@@ -4,6 +4,18 @@ using Test
 
 import PauliPropagation: pauli_symbols
 
+@testset "Identity" begin
+
+    for nq in [1, 4, 7, 17, 33, 64, 127, 1024]
+        created_id = identitypauli(nq)
+        manual_id = PauliPropagation.getinttype(nq)(0)
+        @test created_id == manual_id == 0
+        @test typeof(created_id) == typeof(manual_id)
+        @test typeof(identitypauli(typeof(created_id))) == typeof(created_id)
+        @test typeof(identitylike(created_id)) == typeof(created_id)
+    end
+end
+
 @testset "Int to Symbol" begin
 
     # Test the conversion from integer to symbol
@@ -65,7 +77,7 @@ end
     @test getpauli(pstr.term, inds) == 0
     inds = [1, 2]
     @test getpauli(pstr.term, inds) == 4
-    
+
     # if the indices are not sorted, `getpauli` will reutrn a pauli
     # integer representation according to the unsorted indices
     inds = [2, 1]
