@@ -68,6 +68,7 @@ export
     FrozenGate,
     freeze,
     TGate,
+    TransferMapGate,
     tomatrix
 
 include("Circuits/Circuits.jl")

@@ -43,76 +43,45 @@ using Test
     end
 end
 
-# @testset "PauliRotations PTM" begin
+@testset "Test Transfer Maps and TransferMapGates" begin
+    nq = 1
+    circuit = [CliffordGate(:H, 1), CliffordGate(:X, 1), CliffordGate(:S, 1)]
+    ptmap = totransfermap(circuit, nq)
 
-#     function get_expected_ptm(nqubits, gate, param)
-#         """Construct the expected PTM from the PauliPropagation."""
-#         ptm_map_expected = Vector{Dict}()
-#         for i in 0:4^nqubits-1
+    g = TransferMapGate([1], ptmap)
+    for symb in [:I, :X, :Y, :Z]
+        pstr = PauliString(nq, symb, 1)
+        psum1 = propagate(g, pstr)
+        psum2 = propagate(circuit, pstr)
+        @test psum1 == psum2
+    end
 
-#             pstr = PauliString(nqubits, i, 1.0)
-#             p_propagated = propagate([gate], pstr, [param]).terms
 
-#             push!(ptm_map_expected, p_propagated)
-#         end
+    nq = 2
 
-#         return ptm_map_expected
+    circuit = [CliffordGate(:CNOT, [1, 2]), CliffordGate(:X, 1), CliffordGate(:H, 2), TGate(1), TGate(2)]
+    ptmap = totransfermap(circuit, nq)
+    g = TransferMapGate([1, 2], ptmap)
 
-#     end
+    pstr = PauliString(nq, [:Y, :X], [1, 2])
+    psum1 = propagate(g, pstr)
+    psum2 = propagate(circuit, pstr)
+    @test psum1 == psum2
 
-#     function get_ptm_map_dict(gate, theta, type)
-#         """Get the PTM map as a dictionary."""
 
-#         udag = get_unitary_dagmat(gate, [theta])
-#         ptm_mat = calc_ptm_dagmap(udag)
-#         ptm_map = get_ptm_sparse(ptm_mat, type)
+    nq = 5
 
-#         return [Dict(t[i] => t[i+1] for i in 1:2:length(t)) for t in ptm_map]
-#     end
+    circuit = Gate[]
+    append!(circuit, CliffordGate(:CNOT, pair) for pair in bricklayertopology(nq))
+    append!(circuit, CliffordGate(:H, ii) for ii in 1:nq)
+    append!(circuit, PauliRotation(:Y, ii, π / 8) for ii in 1:nq)
 
-#     function is_ptm_expected(ptm_map_dict, ptm_map_expected)
-#         """Check if the PTM is consistent with the PauliPropagation."""
+    ptmap = totransfermap(circuit, nq)
+    g = TransferMapGate(collect(1:nq), ptmap)
 
-#         for (t_actual, t_expected) in zip(ptm_map_dict, ptm_map_expected)
+    pstr = PauliString(nq, [:X for _ in 1:nq], 1:nq)
+    psum1 = propagate(g, pstr)
+    psum2 = propagate(circuit, pstr)
+    @test psum1 == psum2
 
-#             # Check if the keys are the same
-#             @assert keys(t_actual) == keys(t_expected)
-
-#             for (k, v) in t_actual
-#                 # Check the ptm map is the same
-#                 @assert isapprox(v, t_expected[k])
-#             end
-#         end
-
-#         return true
-#     end
-
-#     @testset "Single qubit rotation" begin
-#         nqubits = 1
-#         pauligate = PauliRotation([:Y], [1])
-#         theta = Random.rand() * 2 * pi
-
-#         ptm_map_dict = get_ptm_map_dict(pauligate, theta, getinttype(nqubits))
-
-#         # PauliPropagation
-#         ptm_map_expected = get_expected_ptm(nqubits, pauligate, theta)
-
-#         # Check if the PTM is consistent with the PauliPropagation
-#         @test is_ptm_expected(ptm_map_dict, ptm_map_expected)
-#     end
-
-#     @testset "Two qubit rotation" begin
-#         nqubits = 2
-#         pauligate = PauliRotation([:Y, :X], [1, 2])
-#         theta = Random.rand() * 2 * pi
-
-#         ptm_map_dict = get_ptm_map_dict(pauligate, theta, getinttype(nqubits))
-
-#         # PauliPropagation
-#         ptm_map_expected = get_expected_ptm(nqubits, pauligate, theta)
-
-#         # Check if the PTM is consistent with the PauliPropagation
-#         @test is_ptm_expected(ptm_map_dict, ptm_map_expected)
-#     end
-
-# end
+end

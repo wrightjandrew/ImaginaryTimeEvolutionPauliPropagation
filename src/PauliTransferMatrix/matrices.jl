@@ -7,7 +7,7 @@
 """
     function calculateptm(U; tol=1e-15)
 
-Calculate the Pauli Transfer Matrix (PTM) of a unitary matrix in sparse format.
+Calculate the Pauli Transfer Matrix (PTM) of a unitary matrix.
 Note, by default the PTM is calculated in the Heisenberg picture, 
 i.e., the PTM is that of the conjugate transpose of the unitary matrix.
 Arguments
