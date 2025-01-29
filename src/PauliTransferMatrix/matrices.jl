@@ -87,18 +87,18 @@ function tomatrix(gate::PauliRotation, theta)
 
     U = cos(theta / 2) * id - 1.0im * sin(theta / 2) * pauli_mat
 
-    return U'
+    return U
 end
 
 
-# """
-#     tomatrix(gate::TGate)
+"""
+    tomatrix(gate::TGate)
 
-# Compute the unitary matrix for a T gate.
-# """
-# function tomatrix(::TGate)
+Compute the unitary matrix for a T gate.
+"""
+function tomatrix(::TGate)
 
-#     U = [[1 0]; [0 exp(1.0im * pi / 4)]]
+    U = [[1 0]; [0 exp(1.0im * pi / 4)]]
 
-#     return U'
-# end
+    return U
+end

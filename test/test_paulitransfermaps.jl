@@ -24,27 +24,24 @@ using Test
 
         @test LinearAlgebra.norm(ptm - expected_ptm) < tol
     end
+
+    # Test using T gate
+    @testset "TGate" begin
+        tgate = TGate(1)
+        matrix = tomatrix(tgate)
+
+        ptmmap = calculateptm(matrix)
+
+        expected_ptm = [
+            [1 0 0 0];
+            [0 1 / sqrt(2) 1 / sqrt(2) 0];
+            [0 -1 / sqrt(2) 1 / sqrt(2) 0];
+            [0 0 0 1]
+        ]
+
+        @test LinearAlgebra.norm(ptmmap - expected_ptm) < tol
+    end
 end
-
-#     # Test using T gate
-#     @testset "TUnitary" begin
-#         tgate = TGate(1)
-#         udag = get_unitary_dagmat(tgate)
-
-#         ptmmap = tomatrix(udag)
-
-#         expected_ptm = [
-#             [1 0 0 0];
-#             [0 1 / sqrt(2) 1 / sqrt(2) 0];
-#             [0 -1 / sqrt(2) 1 / sqrt(2) 0];
-#             [0 0 0 1]
-#         ]
-
-#         @test LinearAlgebra.norm(ptmmap - expected_ptm) < tol
-#     end
-
-#     #TODO (YT): add tests for two-qubit PauliRotation gates using QuEst.
-# end
 
 # @testset "PauliRotations PTM" begin
 

@@ -38,7 +38,7 @@ function calculateptm(U; tol=1e-15)
     for i in 1:4^nqubits
         for j in 1:4^nqubits
             # TODO: real() is a restriction to the input unitary matrix
-            val = tr(U * pauli_basis_vec[j] * Udag * pauli_basis_vec[i])
+            val = tr(Udag * pauli_basis_vec[j] * U * pauli_basis_vec[i])
 
             if abs(val) < tol
                 continue
