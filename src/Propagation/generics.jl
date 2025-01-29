@@ -75,6 +75,8 @@ function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e
     for gate in reverse(circ)
         psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, kwargs...)
     end
+    # TODO: potential bug: If there are Clifford gates in the circuit, merging may swap the psums.
+    #                      Thi smeans that the original psum is not the one that is returned, and that the original psum is empty.
     return psum
 end
 
@@ -120,6 +122,7 @@ After this functions, Pauli strings in remaining in `psum` and `output_psum` are
 This function can be overwritten for a custom gate if the lower-level functions `applyandadd!` and `apply` are not sufficient.
 In particular, this function can be used to manipulate both `psum` and `output_psum` at the same time to reduce memory movement.
 Note that manipulating `psum` on anything other than the current Pauli string will likely lead to errors.
+See the `4-custom-gates.ipynb` for examples of how to define custom gates.
 """
 function applytoall!(gate, theta, psum, output_psum; kwargs...)
 
@@ -142,15 +145,15 @@ end
 This function can be overwritten for a custom gate if the lower-level function `apply` is not sufficient. 
 This is likely the the case if `apply` is not type-stable because it does not return a unique number of outputs. 
 E.g., a Pauli gate returns 1 or 2 (pstr, coefficient) outputs.
+See the `4-custom-gates.ipynb` for examples of how to define custom gates.
 """
 @inline function applyandadd!(gate, pstr, coeff, theta, output_psum; kwargs...)
 
-    # Get the (potentially new) pauli strings and their coefficients like (pstr1, coeff1, pstr2, coeff2, ...)
+    # Get the (potentially new) pauli strings and their coefficients in the form of ((pstr1, coeff1), (pstr2, coeff2), ...)
     pstrs_and_coeffs = apply(gate, pstr, coeff, theta; kwargs...)
 
-    for ii in 1:2:length(pstrs_and_coeffs)
+    for (new_pstr, new_coeff) in pstrs_and_coeffs
         # Itererate over the pairs of pstr and coeff
-        new_pstr, new_coeff = pstrs_and_coeffs[ii], pstrs_and_coeffs[ii+1]
         # Store the new_pstr and coeff in the aux_psum, add to existing coeff if new_pstr already exists there
         add!(output_psum, new_pstr, new_coeff)
     end
@@ -164,6 +167,7 @@ end
 
 Calling apply on a `StaticGate` will dispatch to a 3-argument apply function without the paramter `theta`.
 If a 4-argument apply function is defined for a concrete type, it will still dispatch to that one.
+See the `4-custom-gates.ipynb` for examples of how to define custom gates.
 """
 apply(gate::SG, pstr, coeff, theta; kwargs...) where {SG<:StaticGate} = apply(gate, pstr, coeff; kwargs...)
 
