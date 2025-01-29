@@ -5,6 +5,7 @@
 ###
 
 
+## T gate
 """
     TGate(qind::Integer) <: StaticGate
 
@@ -14,3 +15,14 @@ It acts on qubit `qind` like a `PauliRotation(:Z, qind)` with angle π/4.
 struct TGate <: StaticGate
     qind::Int
 end
+
+"""
+    tomatrix(gate::TGate)
+
+Compute the unitary matrix for a `TGate`.
+"""
+function tomatrix(::TGate)
+    return _tgate_unitary
+end
+
+const _tgate_unitary = [[1 0]; [0 exp(1.0im * pi / 4)]]

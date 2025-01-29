@@ -57,42 +57,6 @@ function calculateptm(U; tol=1e-15)
 end
 
 
-"""
-    tomatrix(gate::PauliRotation, theta)
-
-Compute the unitary matrix for the `PauliRotation` gate with parameter `theta` in the computational 0/1 basis.
-"""
-function tomatrix(gate::PauliRotation, theta)
-
-    nqubits = length(gate.qinds)
-    pauli_basis_vec = getpaulibasis(nqubits)
-
-    # The indices of the pauli matrix are sorted in ascending order
-    sorted_indices = sortperm(gate.qinds)
-    pauli = gate.symbols[sorted_indices]
-
-    # These pauli matrices are normalized by sqrt(2)^nqubits
-    pauli_mat = sqrt(2)^nqubits * pauli_basis_vec[symboltoint(pauli)+1]
-
-    id = I(2^nqubits)
-
-    U = cos(theta / 2) * id - 1.0im * sin(theta / 2) * pauli_mat
-
-    return U
-end
-
-
-"""
-    tomatrix(gate::TGate)
-
-Compute the unitary matrix for a `TGate`.
-"""
-function tomatrix(::TGate)
-    return _tgate_unitary
-end
-
-const _tgate_unitary = [[1 0]; [0 exp(1.0im * pi / 4)]]
-
 ## Pauli basis matrices
 const Idmat = [1 0; 0 1]
 const Xmat = [0 1; 1 0]

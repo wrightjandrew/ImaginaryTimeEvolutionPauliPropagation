@@ -38,6 +38,11 @@ export
     commutator,
     getinttype
 
+include("PauliTransferMatrix/PauliTransferMatrix.jl")
+export
+    getpaulibasis,
+    calculateptm,
+    totransfermap
 
 include("Gates/Gates.jl")
 export
@@ -62,7 +67,8 @@ export
     AmplitudeDampingNoise,
     FrozenGate,
     freeze,
-    TGate
+    TGate,
+    tomatrix
 
 include("Circuits/Circuits.jl")
 export
@@ -112,13 +118,6 @@ export
     applyandadd!,
     mergeandempty!,
     merge
-
-include("PauliTransferMatrix/PauliTransferMatrix.jl")
-export
-    getpaulibasis,
-    calculateptm,
-    tomatrix,
-    totransfermap
 
 include("stateoverlap.jl")
 export
