@@ -5,56 +5,52 @@
 ###
 
 """
-    function calculateptm(U; tol=1e-15)
+    function calculateptm(mat; tol=1e-15)
 
-Calculate the Pauli Transfer Matrix (PTM) of a unitary matrix.
+Calculate the Pauli Transfer Matrix (PTM) of a matrix `mat`. 
+If `mat` is unitary, the PTM will be real-valued. Otherwise it can be complex.
 Note, by default the PTM is calculated in the -> Heisenberg picture <-, 
-i.e., the PTM is that of the conjugate transpose of the unitary matrix.
+i.e., the PTM is that of the conjugate transpose of the  matrix.
 Arguments
-- `U::Matrix`: The unitary matrix for which the PTM is calculated.
+- `mat::Matrix`: The unitary matrix for which the PTM is calculated.
 - `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
 
 Returns
-- `ptm::Matrix`: The PTM of the conjugate transpose of unitary matrix `U`.
+- `ptm::Matrix`: The PTM of the conjugate transpose of matrix `mat`.
 """
-function calculateptm(U; tol=1e-15)
-    Udag = U'
-    if Udag * U ≈ U * Udag ≈ I
-        # The matrix is unitary, so the PTM is real
-        ET = Float64
-    else
-        # The matrix is not unitary, so the PTM can be complex
-        ET = ComplexF64
-    end
+function calculateptm(mat; tol=1e-15)
+    mat_dag = mat'
 
+    nqubits = Int(log(2, size(mat_dag)[1]))
 
-    nqubits = Int(log(2, size(Udag)[1]))
-
-    # Initialize the PTM
-    ptm = zeros(ET, 4^nqubits, 4^nqubits)
+    # Initialize the PTM as complex
+    # Later we will see if the PTM is real
+    # TODO: Can we determine this directly from `mat`?
+    ptm = zeros(ComplexF64, 4^nqubits, 4^nqubits)
 
     # The pauli basis vector is defined to be consistent with index of the pstr
     pauli_basis_vec = getpaulibasis(nqubits)
 
-    # We are taking udag as the actual unitary, and the PTM is defined by
-    # evolving P_j and take overlap with P_i
-    # PTM_{ij} = Tr(udag * P_j * udag^{\dagger} * P_i)
-    # in the Pauli basis, this is always real.
-    # In the general case of non-unitary matrices, the PTM can be complex.
-    # TODO: Verify exactly when that happens
+    # TODO: sparse PTMs?
     for i in 1:4^nqubits
         for j in 1:4^nqubits
             # TODO: Verify that this is correct for the Heisenberg picture.
-            val = tr(Udag * pauli_basis_vec[j] * U * pauli_basis_vec[i])
+            val = tr(mat_dag * pauli_basis_vec[j] * mat * pauli_basis_vec[i])
 
+            # truncate small values
             if abs(val) < tol
                 continue
             end
-            ptm[i, j] = ET(val)
+            ptm[i, j] = complex(val)
         end
     end
 
-    return ptm  # return the ptm as a sparse matrix
+    # we don't want to unnecessarily return a complex PTM
+    if all(imag(ptm) .≈ 0)
+        ptm = real(ptm)
+    end
+
+    return ptm
 end
 
 
