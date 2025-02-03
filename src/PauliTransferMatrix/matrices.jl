@@ -25,6 +25,14 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
 
     nqubits = Int(log(2, size(mat_dag)[1]))
 
+    if nqubits >= 6
+        @warn (
+            "Entering `calculateptm()` with $nqubits qubits. " *
+            "This may soon local machines out of memory or take very long."
+        )
+        flush(stderr)
+    end
+
     # Initialize the PTM as complex
     # Later we will see if the PTM is real
     # TODO: Can we determine this directly from `mat`?
@@ -36,14 +44,16 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
     # TODO: sparse PTMs?
     for i in 1:4^nqubits
         for j in 1:4^nqubits
-            # TODO: Verify that this is correct for the Heisenberg picture.
+            # The PTM is defined by evolving P_j and taking the overlap with P_i
+            # i.e., how much does each Pauli transform into outer Paulis.
             val = tr(pauli_basis_vec[i] * mat * pauli_basis_vec[j] * mat_dag)
 
             # truncate small values
             if abs(val) < tol
                 continue
             end
-            ptm[i, j] = complex(val)
+
+            ptm[i, j] = val
         end
     end
 

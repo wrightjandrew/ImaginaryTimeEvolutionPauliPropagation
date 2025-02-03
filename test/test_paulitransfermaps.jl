@@ -93,11 +93,11 @@ end
     nq = 5
 
     circuit = Gate[]
-    append!(circuit, CliffordGate(:CNOT, pair) for pair in bricklayertopology(nq; periodic=true))
-    append!(circuit, CliffordGate(:H, ii) for ii in 1:nq)
-    append!(circuit, PauliRotation(:Y, ii) for ii in 1:nq)
+    rxlayer!(circuit, nq)
+    rzlayer!(circuit, nq)
+    ryylayer!(circuit, bricklayertopology(nq))
 
-    thetas = fill(pi / 8, countparameters(circuit))
+    thetas = randn(countparameters(circuit))
     static_circuit = freeze(circuit, thetas)
 
     ptmap = totransfermap(nq, circuit, thetas)
@@ -106,7 +106,7 @@ end
 
     g = TransferMapGate(collect(1:nq), ptmap)
 
-    pstr = PauliString(nq, [:X for _ in 1:nq], 1:nq)
+    pstr = PauliString(nq, [rand((:X, :Y, :Z)) for _ in 1:nq], 1:nq)
     psum1 = propagate(g, pstr)
     psum2 = propagate(circuit, pstr, thetas)
     @test psum1 == psum2
