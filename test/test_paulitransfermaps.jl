@@ -65,14 +65,15 @@ end
 
 @testset "Test Transfer Maps and TransferMapGates" begin
     nq = 1
-    circuit = [CliffordGate(:H, 1), CliffordGate(:X, 1), CliffordGate(:S, 1)]
-    ptmap = totransfermap(circuit, nq)
+    gate = PauliRotation(:X, 1)
+    theta = 0.3
+    ptmap = totransfermap(nq, gate, theta)
 
     g = TransferMapGate([1], ptmap)
     for symb in [:I, :X, :Y, :Z]
         pstr = PauliString(nq, symb, 1)
         psum1 = propagate(g, pstr)
-        psum2 = propagate(circuit, pstr)
+        psum2 = propagate(gate, pstr, theta)
         @test psum1 == psum2
     end
 
@@ -80,7 +81,7 @@ end
     nq = 2
 
     circuit = [CliffordGate(:CNOT, [1, 2]), CliffordGate(:X, 1), CliffordGate(:H, 2), TGate(1), TGate(2)]
-    ptmap = totransfermap(circuit, nq)
+    ptmap = totransfermap(nq, circuit)
     g = TransferMapGate([1, 2], ptmap)
 
     pstr = PauliString(nq, [:Y, :X], [1, 2])
@@ -99,8 +100,8 @@ end
     thetas = fill(pi / 8, countparameters(circuit))
     static_circuit = freeze(circuit, thetas)
 
-    ptmap = totransfermap(circuit, thetas, nq)
-    static_ptmap = totransfermap(static_circuit, nq)
+    ptmap = totransfermap(nq, circuit, thetas)
+    static_ptmap = totransfermap(nq, static_circuit)
     @test ptmap == static_ptmap
 
     g = TransferMapGate(collect(1:nq), ptmap)

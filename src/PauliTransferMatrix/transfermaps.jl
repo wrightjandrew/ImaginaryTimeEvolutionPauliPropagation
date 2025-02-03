@@ -7,12 +7,13 @@
 
 
 """
-    totransfermap(circuit::Vector{Gate}, thetas, nq::Integer)
+    totransfermap(nq::Integer, circuit::Vector{Gate}, thetas=nothing)
 
 Computes the Pauli transfer map from a circuit with parameters `thetas`.
+`thetas` defaults to `nothing` but is required if the circuit contains parametrized gates.
 The returned lookup map is a vector of vectors like [(pstr1, coeff1), (pstr2, coeff2), ...]
 """
-function totransfermap(circuit, thetas, nq::Integer)
+function totransfermap(nq::Integer, circuit, thetas=nothing)
 
     TermType = getinttype(nq)
 
@@ -24,22 +25,6 @@ function totransfermap(circuit, thetas, nq::Integer)
 
     # Convert our transfer map style, i.e., vector of vector of tuples
     return [[(TermType(paulis), coeff) for (paulis, coeff) in psum] for psum in psums]
-
-end
-
-"""
-    totransfermap(circuit::Vector{<:StaticGate}, nq::Integer)
-
-Computes the Pauli transfer map from a circuit consisting of non-parametrized `StaticGate`s.
-The returned lookup map is a vector of vectors like [(pstr1, coeff1), (pstr2, coeff2), ...]
-"""
-function totransfermap(circuit, nq::Integer)
-    if !(all([isa(gate, StaticGate) for gate in circuit]))
-        throw(ArgumentError("All gates in the circuit must be non-parametrized `StaticGate`s."))
-    end
-
-    # dispatch to the function with thetas = nothing
-    return totransfermap(circuit, nothing, nq)
 
 end
 
