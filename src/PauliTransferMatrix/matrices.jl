@@ -5,20 +5,22 @@
 ###
 
 """
-    function calculateptm(mat; tol=1e-15)
+    function calculateptm(mat; tol=1e-15, heisenberg=true)
 
 Calculate the Pauli Transfer Matrix (PTM) of a matrix `mat`. 
-If `mat` is unitary, the PTM will be real-valued. Otherwise it can be complex.
+If `mat` is the matrix exponential of a (anti-)Hermitian matrix, the PTM will be real-valued. Otherwise it can be complex.
 Note, by default the PTM is calculated in the -> Heisenberg picture <-, 
 i.e., the PTM is that of the conjugate transpose of the  matrix.
+This can be changed via the `heisenberg::Bool` keyword argument.
 Arguments
 - `mat::Matrix`: The unitary matrix for which the PTM is calculated.
 - `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
+- `heisenberg::Bool=true`: Whether the PTM is calculated in the Heisenberg picture. 
 
 Returns
 - `ptm::Matrix`: The PTM of the conjugate transpose of matrix `mat`.
 """
-function calculateptm(mat; tol=1e-15)
+function calculateptm(mat; tol=1e-15, heisenberg=true)
     mat_dag = mat'
 
     nqubits = Int(log(2, size(mat_dag)[1]))
@@ -35,7 +37,7 @@ function calculateptm(mat; tol=1e-15)
     for i in 1:4^nqubits
         for j in 1:4^nqubits
             # TODO: Verify that this is correct for the Heisenberg picture.
-            val = tr(mat_dag * pauli_basis_vec[j] * mat * pauli_basis_vec[i])
+            val = tr(pauli_basis_vec[i] * mat * pauli_basis_vec[j] * mat_dag)
 
             # truncate small values
             if abs(val) < tol
@@ -43,6 +45,10 @@ function calculateptm(mat; tol=1e-15)
             end
             ptm[i, j] = complex(val)
         end
+    end
+
+    if heisenberg
+        ptm = transpose(ptm)
     end
 
     # we don't want to unnecessarily return a complex PTM

@@ -4,6 +4,29 @@
 ##
 ###
 
+
+
+"""
+    totransfermap(circuit::Vector{Gate}, thetas, nq::Integer)
+
+Computes the Pauli transfer map from a circuit with parameters `thetas`.
+The returned lookup map is a vector of vectors like [(pstr1, coeff1), (pstr2, coeff2), ...]
+"""
+function totransfermap(circuit, thetas, nq::Integer)
+
+    TermType = getinttype(nq)
+
+    # max integer to feed into the circuit
+    max_integer = 4^nq - 1
+
+    # Do one propagation per initial Pauli string on the number of qubits (can be very expensive)
+    psums = [propagate(circuit, PauliString(nq, TermType(ii), 1.0), thetas; min_abs_coeff=0) for ii in 0:max_integer]
+
+    # Convert our transfer map style, i.e., vector of vector of tuples
+    return [[(TermType(paulis), coeff) for (paulis, coeff) in psum] for psum in psums]
+
+end
+
 """
     totransfermap(circuit::Vector{<:StaticGate}, nq::Integer)
 
@@ -15,16 +38,8 @@ function totransfermap(circuit, nq::Integer)
         throw(ArgumentError("All gates in the circuit must be non-parametrized `StaticGate`s."))
     end
 
-    TermType = getinttype(nq)
-
-    # max integer to feed into the circuit
-    max_integer = 4^nq - 1
-
-    # Do one propagation per initial Pauli string on the number of qubits (can be very expensive)
-    psums = [propagate(circuit, PauliString(nq, TermType(ii), 1.0); min_abs_coeff=0) for ii in 0:max_integer]
-
-    # Convert our transfer map style, i.e., vector of vector of tuples
-    return [[(TermType(paulis), coeff) for (paulis, coeff) in psum] for psum in psums]
+    # dispatch to the function with thetas = nothing
+    return totransfermap(circuit, nothing, nq)
 
 end
 
@@ -35,7 +50,7 @@ Computes the Pauli transfer map from a Pauli Transfer Matrix (PTM).
 The PTM should be the matrix representation of a gate in Pauli basis.
 The returned lookup map is a vector of vectors like [(pstr1, coeff1), (pstr2, coeff2), ...]
 """
-function totransfermap(ptm::Matrix)
+function totransfermap(ptm::AbstractMatrix)
     col_length = size(ptm)[1]
     nq = Int(log(4, col_length))
 
