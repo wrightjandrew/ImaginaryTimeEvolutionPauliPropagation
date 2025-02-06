@@ -17,6 +17,7 @@ export
     numcoefftype,
     getcoeff,
     topaulistrings,
+    mult!,
     add!,
     set!,
     empty!,

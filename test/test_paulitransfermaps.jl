@@ -64,14 +64,15 @@ end
 
 
 @testset "Test Transfer Maps and TransferMapGates" begin
-    nq = 1
-    gate = PauliRotation(:X, 1)
+    nq = 2
+    gate = PauliRotation(:X, 2)
     theta = 0.3
-    ptmap = totransfermap(nq, gate, theta)
+    # get the PTmap on qubit 1 but apply on qubit 2
+    ptmap = totransfermap(1, PauliRotation(:X, 1), theta)
 
-    g = TransferMapGate([1], ptmap)
+    g = TransferMapGate([2], ptmap)
     for symb in [:I, :X, :Y, :Z]
-        pstr = PauliString(nq, symb, 1)
+        pstr = PauliString(nq, symb, 2)
         psum1 = propagate(g, pstr)
         psum2 = propagate(gate, pstr, theta)
         @test psum1 == psum2
