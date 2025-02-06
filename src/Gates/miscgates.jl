@@ -31,18 +31,22 @@ const _tgate_unitary = [[1 0]; [0 exp(1.0im * pi / 4)]]
 ## TransferMapGate
 # TODO: this should all be made immutable for performance
 """
-    TransferMapGate(qinds::Vector{Int}, transfer_map::Vector{Vector{Tuple{TermType,CoeffType}}}) <: StaticGate
+    TransferMapGate(transfer_map::Vector{Vector{Tuple{TermType,CoeffType}}}, qinds::Vector{Int}) <: StaticGate
 
 A non-parametrized `StaticGate` defined by a transfer map acting on the qubits `qinds`.
 Transfer maps can be constructed manually or generated via `totransfermap()`.
 """
 struct TransferMapGate{TT,CT} <: StaticGate
-    qinds::Vector{Int}
     transfer_map::Vector{Vector{Tuple{TT,CT}}}
+    qinds::Vector{Int}
 
-    function TransferMapGate(qinds::Vector{Int}, transfer_map::Vector{Vector{Tuple{TT,CT}}}) where {TT,CT}
+    function TransferMapGate(transfer_map::Vector{Vector{Tuple{TT,CT}}}, qinds) where {TT,CT}
+        # accept anything that can be converted to a vector of integers
+        qinds = vec(collect(qinds))
         nq = length(qinds)
+
         @assert nq == Int(log(4, length(transfer_map))) "The length of `qinds` `n=$nq` does not match the length of the transfer map `$(length(transfer_map)) ≠ 2^$nq`."
-        return new{TT,CT}(qinds, transfer_map)
+
+        return new{TT,CT}(transfer_map, qinds)
     end
 end

@@ -1,6 +1,6 @@
 ###
 ##
-# This files contains functions to calculate the Pauli Transfer Matrix (PTM) of a unitary matrix.
+# This files contains functions to calculate the Pauli Transfer Matrix (PTM) of a matrix.
 ##
 ###
 

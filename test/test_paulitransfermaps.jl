@@ -49,7 +49,7 @@ end
     U = tomatrix(pauli_rotation, θ)
     ptm = calculateptm(U)
     transfer_map = totransfermap(ptm)
-    transfer_map_gate = TransferMapGate([1], transfer_map)
+    transfer_map_gate = TransferMapGate(transfer_map, 1)
 
     for symb in [:I, :X, :Y, :Z]
         pstr = PauliString(1, symb, 1)
@@ -70,7 +70,7 @@ end
     # get the PTmap on qubit 1 but apply on qubit 2
     ptmap = totransfermap(1, PauliRotation(:X, 1), theta)
 
-    g = TransferMapGate([2], ptmap)
+    g = TransferMapGate(ptmap, 2)
     for symb in [:I, :X, :Y, :Z]
         pstr = PauliString(nq, symb, 2)
         psum1 = propagate(g, pstr)
@@ -83,7 +83,7 @@ end
 
     circuit = [CliffordGate(:CNOT, [1, 2]), CliffordGate(:X, 1), CliffordGate(:H, 2), TGate(1), TGate(2)]
     ptmap = totransfermap(nq, circuit)
-    g = TransferMapGate([1, 2], ptmap)
+    g = TransferMapGate(ptmap, (1, 2))
 
     pstr = PauliString(nq, [:Y, :X], [1, 2])
     psum1 = propagate(g, pstr)
@@ -105,7 +105,7 @@ end
     static_ptmap = totransfermap(nq, static_circuit)
     @test ptmap == static_ptmap
 
-    g = TransferMapGate(collect(1:nq), ptmap)
+    g = TransferMapGate(ptmap, 1:nq)
 
     pstr = PauliString(nq, [rand((:X, :Y, :Z)) for _ in 1:nq], 1:nq)
     psum1 = propagate(g, pstr)
