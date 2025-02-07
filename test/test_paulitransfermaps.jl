@@ -14,6 +14,7 @@ using Test
         U = tomatrix(pauligate, theta)
 
         ptm = calculateptm(U)
+        ptm_schrodinger = calculateptm(U, heisenberg=false)
 
         expected_ptm = [
             [1 0 0 0];
@@ -23,6 +24,7 @@ using Test
         ]
 
         @test LinearAlgebra.norm(ptm - expected_ptm) < tol
+        @test LinearAlgebra.norm(ptm_schrodinger - transpose(expected_ptm)) < tol
     end
 
     # Test using T gate
@@ -31,6 +33,7 @@ using Test
         matrix = tomatrix(tgate)
 
         ptmmap = calculateptm(matrix)
+        ptm_schrodinger = calculateptm(matrix, heisenberg=false)
 
         expected_ptm = [
             [1 0 0 0];
@@ -40,6 +43,7 @@ using Test
         ]
 
         @test LinearAlgebra.norm(ptmmap - expected_ptm) < tol
+        @test LinearAlgebra.norm(ptm_schrodinger - transpose(expected_ptm)) < tol
     end
 end
 
@@ -112,62 +116,4 @@ end
     psum2 = propagate(circuit, pstr, thetas)
     @test psum1 == psum2
 
-end
-
-@testset "Unitaries PTM Tests" begin
-    """Test the PTM for unitary matrices."""
-    tol = 1e-12
-
-    # Test using single-qubit PauliRotation gate
-    @testset "PauliRotation Y" begin
-        pauligate = PauliRotation(:Y, 1)
-        theta = Random.randn()
-
-        U = tomatrix(pauligate, theta)
-        exptected_U = [
-            [cos(theta / 2) -sin(theta / 2)];
-            [sin(theta / 2) cos(theta / 2)]
-        ]
-        @test LinearAlgebra.norm(U - exptected_U) < tol
-
-        ptm_heisenberg = calculateptm(U)
-        ptm_schrodinger = calculateptm(U, heisenberg=false)
-
-        expected_ptm = [
-            [1 0 0 0];
-            [0 cos(theta) 0 -sin(theta)];
-            [0 0 1 0];
-            [0 sin(theta) 0 cos(theta)]
-        ]
-
-        @test LinearAlgebra.norm(ptm_heisenberg - expected_ptm) < tol
-        @test LinearAlgebra.norm(ptm_schrodinger - transpose(expected_ptm)) < tol
-    end
-
-    # Test using T gate
-    @testset "TUnitary" begin
-        tgate = TGate(1)
-        U = tomatrix(tgate)
-        expected_U = [
-            [1 0];
-            [0 exp(1.0im * pi / 4)]
-        ]
-        @test LinearAlgebra.norm(U - expected_U) < tol
-
-        ptm_heisenberg = calculateptm(U)
-        ptm_schrodinger = calculateptm(U, heisenberg=false)
-
-
-        expected_ptm = [
-            [1 0 0 0];
-            [0 1 / sqrt(2) 1 / sqrt(2) 0];
-            [0 -1 / sqrt(2) 1 / sqrt(2) 0];
-            [0 0 0 1]
-        ]
-
-        @test LinearAlgebra.norm(ptm_heisenberg - expected_ptm) < tol
-        @test LinearAlgebra.norm(ptm_schrodinger - transpose(expected_ptm)) < tol
-    end
-
-    #TODO (YT): add tests for two-qubit PauliRotation gates using QuEst.
 end
