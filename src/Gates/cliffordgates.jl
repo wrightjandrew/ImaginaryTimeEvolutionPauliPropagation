@@ -22,9 +22,7 @@ struct CliffordGate <: StaticGate
         qinds = vec(collect(qinds))
 
         # check that the qubit indices are positive integers
-        if any(qind -> qind <= 0, qinds)
-            throw(ArgumentError("Qubit indices must be positive integers."))
-        end
+        _qinds_check(qinds)
 
         # check that the symbol is a key in the clifford_map
         if !haskey(clifford_map, symbol)
