@@ -125,4 +125,14 @@ end
     result_psum = subtractpaulisums()
     expected_psum = PauliSum(3, Dict([:I, :I, :Y] => 1.0))
     @test result_psum == expected_psum
+    @test result_psum ≈ expected_psum
+
+    complex_psum = PauliSum(3, Dict(pstr => complex(coeff) for (pstr, coeff) in result_psum))
+    @test result_psum ≈ complex_psum
+
+    # Not sure why this returns false, but this is Base Julia behavior
+    # between tiny differences between Float64 and Complex{Float64}
+    # Question/ TODO: Do we want to change this behavior compared to Base Julia?
+    @test !(result_psum ≈ complex_psum + eps(coefftype(result_psum)))
+
 end

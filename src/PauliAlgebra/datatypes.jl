@@ -248,7 +248,9 @@ function getcoeff(psum::PauliSum{TT,CT}, pstr::TT) where {TT,CT}
     # TODO: This is not yet compatible with `PathProperties`
     if CT <: PathProperties
         throw(ArgumentError(
-            "This function is not yet compatible with PathProperties."))
+            "This function is not yet compatible with PathProperties. " *
+            "Try psum.term[pstr]."
+        ))
     end
     return get(psum.terms, pstr, zero(CT))
 end
@@ -385,19 +387,29 @@ end
 
 Approximate equality check for `PauliSum`.
 """
-function Base.:≈(psum1::PauliSum, psum2::PauliSum)
-    if psum1.nqubits != psum2.nqubits
-        return false
-    end
-    if length(psum1) != length(psum2)
+function Base.:≈(psum1::PauliSum{TT1,CT1}, psum2::PauliSum{TT2,CT2}) where {TT1,CT1,TT2,CT2}
+    if TT1 != TT2
         return false
     end
 
-    for ((pstr1, coeff1), (pstr2, coeff2)) in zip(psum1, psum2)
-        if pstr1 != pstr2 || !isapprox(coeff1, coeff2)
+    if psum1.nqubits != psum2.nqubits
+        return false
+    end
+
+    # we don't strictly need to check the length of the dictionaries
+    # small values are allowed for Pauli strings that don't exist in both
+    # our solution is to check for approximate equality both ways
+    for (pstr, coeff) in psum1
+        if !isapprox(get(psum2.terms, pstr, CT2(0.0)), coeff)
             return false
         end
     end
+    for (pstr, coeff) in psum2
+        if !isapprox(get(psum1.terms, pstr, CT1(0.0)), coeff)
+            return false
+        end
+    end
+
     return true
 end
 
