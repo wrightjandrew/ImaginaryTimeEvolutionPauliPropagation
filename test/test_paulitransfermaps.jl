@@ -113,3 +113,46 @@ end
     @test psum1 == psum2
 
 end
+
+@testset "Unitaries PTM Tests" begin
+    """Test the PTM for unitary matrices."""
+    tol = 1e-12
+
+    # Test using single-qubit PauliRotation gate
+    @testset "PauliRotation Y" begin
+        pauligate = PauliRotation(:Y, 1)
+        theta = Random.randn()
+
+        udag = tomatrix(pauligate, theta)
+
+        ptm = calculateptm(udag)
+
+        expected_ptm = [
+            [1 0 0 0];
+            [0 cos(theta) 0 -sin(theta)];
+            [0 0 1 0];
+            [0 sin(theta) 0 cos(theta)]
+        ]
+
+        @test LinearAlgebra.norm(ptm - expected_ptm) < tol
+    end
+
+    # Test using T gate
+    @testset "TUnitary" begin
+        tgate = TGate(1)
+        udag = tomatrix(tgate)
+
+        ptm = calculateptm(udag)
+
+        expected_ptm = [
+            [1 0 0 0];
+            [0 1 / sqrt(2) 1 / sqrt(2) 0];
+            [0 -1 / sqrt(2) 1 / sqrt(2) 0];
+            [0 0 0 1]
+        ]
+
+        @test LinearAlgebra.norm(ptm - expected_ptm) < tol
+    end
+
+    #TODO (YT): add tests for two-qubit PauliRotation gates using QuEst.
+end
