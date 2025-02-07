@@ -13,7 +13,7 @@ function createpaulistring(nq)
     qinds = rand(1:nq, min(nq, 4))
     coeff = randn()
     pstr = PauliString(nq, symbols, qinds, coeff)
-    print(pstr)
+
     return pstr
 end
 
@@ -25,11 +25,13 @@ function createpaulisum(nq)
 
     pstr = createpaulistring(nq)
     psum = PauliSum(pstr)
-    print(psum)
+
     return psum
 end
 
-function addtopaulisum(nq)
+@testset "Add to PauliSum" begin
+    nq = 65
+
     psum = createpaulisum(nq)
     pstr = createpaulistring(nq)
     pstr_temp = psum + pstr
@@ -53,15 +55,45 @@ function addtopaulisum(nq)
     @test getcoeff(psum2, symbols, qinds) == coeff
 
     psum3 = psum + psum2
-    print(topaulistrings(psum3))
+    println(psum3)
+
     psum2 - psum3
 
     return psum
 end
 
 @testset "PauliString Tests" begin
+    nq = 7
+    symbol = rand([:I, :X, :Y, :Z])
+    qind = rand(1:nq)
+    coeff = randn()
+    pstr = PauliString(nq, symbol, qind, coeff)
+    @test pstr.coeff == coeff
+    @test pstr.nqubits == nq
+
+    symbols = rand([:I, :X, :Y, :Z], min(nq, 4))
+    qinds = shuffle(1:nq)[1:min(nq, 4)]
+    coeff = randn()
+    pstr = PauliString(nq, symbols, qinds, coeff)
+    println(pstr)
+    for (ii, qind) in enumerate(qinds)
+        @test getpauli(pstr.term, qind) == symboltoint(symbols[ii])
+    end
+    @test getpauli(pstr.term, qinds) == symboltoint(symbols)
+
+
+    nq = 17
+    psum = PauliSum(nq)
+    @test length(psum) == length(psum.terms) == 0
+    @test coefftype(psum) == Float64
+    @test paulitype(psum) == getinttype(nq) == UInt64
+    println(psum)
+
+
     pstr = createpaulistring(7)
     wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
+    @test coefftype(wrapped_pstr) <: PauliFreqTracker
+    @test tonumber(wrapped_pstr.coeff) == tonumber(pstr.coeff) == pstr.coeff
 end
 
 # Test PauliSum from Dict creation
