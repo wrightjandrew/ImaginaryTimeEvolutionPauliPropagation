@@ -10,7 +10,7 @@ function createpaulistring(nq)
     PauliString(nq, symbol, qind, coeff)
 
     symbols = rand([:I, :X, :Y, :Z], min(nq, 4))
-    qinds = rand(1:nq, min(nq, 4))
+    qinds = shuffle(1:nq)[1:min(nq, 4)]
     coeff = randn()
     pstr = PauliString(nq, symbols, qinds, coeff)
 
@@ -48,7 +48,7 @@ end
     @test getcoeff(psum, symbol, qind) == coeff
 
     symbols = rand([:I, :X, :Y, :Z], min(nq, 4))
-    qinds = rand(1:nq, min(nq, 4))
+    qinds = shuffle(1:nq)[1:min(nq, 4)]
     coeff = randn()
     psum2 = createpaulisum(nq)
     add!(psum2, symbols, qinds, coeff)

@@ -87,14 +87,6 @@ function +(path1::PProp, path2::PProp) where {PProp<:PathProperties}
     return PProp((updateval(getfield(path1, fname), getfield(path2, fname), fname) for fname in fields)...)
 end
 
-"""
-    numcoefftype(path::PathProperties)
-
-Return the type of the coefficient `coeff` in a `PathProperties` object if applicable.
-"""
-function numcoefftype(path::PProp) where {PProp<:PathProperties}
-    return typeof(tonumber(path))
-end
 
 """
     tonumber(val::PathProperties)

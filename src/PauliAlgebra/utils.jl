@@ -61,12 +61,21 @@ Maps a vector of symbols `pstr` acting on the indices `qinds` to an integer Paul
 `qinds` can be any iterable.
 """
 function symboltoint(nqubits::Integer, paulis, qinds)
+    # whatever type these are, they should be the same length
     if length(paulis) != length(qinds)
         throw(ArgumentError("Length of `paulis=$(length(paulis))` and `qinds`=$(length(qinds)) should be the same."))
     end
-    if nqubits < maximum(qinds)
-        throw(ArgumentError("Indices in `qinds`=$qinds acts on more qubits than `nqubits`=$nqubits."))
+
+    # check that qinds are in the correct range 1 <= qind <= nqubits
+    if any(qind -> !(1 <= qind <= nqubits), qinds)
+        throw(ArgumentError("Indices `qinds` should be in the range 1 <= ... <= nqubits. Got `qinds`=$(qinds)."))
     end
+
+    # check that indices are unique, which is otherwise likely unintended
+    if length(qinds) != length(Set(qinds))
+        throw(ArgumentError("Indices `qinds` should be unique. Got `qinds`=$(qinds)."))
+    end
+
     TT = getinttype(nqubits)
     return symboltoint(TT, paulis, qinds)
 end
