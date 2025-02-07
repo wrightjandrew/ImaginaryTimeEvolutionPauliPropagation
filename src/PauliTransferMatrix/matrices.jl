@@ -48,6 +48,11 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
             # i.e., how much does each Pauli transform into outer Paulis.
             val = tr(pauli_basis_vec[i] * mat * pauli_basis_vec[j] * mat_dag)
 
+            # the common case that elements are 1.0 can cause floats like 0.9999....
+            if val ≈ 1.0
+                val = 1.0
+            end
+
             # truncate small values
             if abs(val) < tol
                 continue
