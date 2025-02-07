@@ -123,9 +123,15 @@ end
         pauligate = PauliRotation(:Y, 1)
         theta = Random.randn()
 
-        udag = tomatrix(pauligate, theta)
+        U = tomatrix(pauligate, theta)
+        exptected_U = [
+            [cos(theta / 2) -sin(theta / 2)];
+            [sin(theta / 2) cos(theta / 2)]
+        ]
+        @test LinearAlgebra.norm(U - exptected_U) < tol
 
-        ptm = calculateptm(udag)
+        ptm_heisenberg = calculateptm(U)
+        ptm_schrodinger = calculateptm(U, heisenberg=false)
 
         expected_ptm = [
             [1 0 0 0];
@@ -134,15 +140,23 @@ end
             [0 sin(theta) 0 cos(theta)]
         ]
 
-        @test LinearAlgebra.norm(ptm - expected_ptm) < tol
+        @test LinearAlgebra.norm(ptm_heisenberg - expected_ptm) < tol
+        @test LinearAlgebra.norm(ptm_schrodinger - transpose(expected_ptm)) < tol
     end
 
     # Test using T gate
     @testset "TUnitary" begin
         tgate = TGate(1)
-        udag = tomatrix(tgate)
+        U = tomatrix(tgate)
+        expected_U = [
+            [1 0];
+            [0 exp(1.0im * pi / 4)]
+        ]
+        @test LinearAlgebra.norm(U - expected_U) < tol
 
-        ptm = calculateptm(udag)
+        ptm_heisenberg = calculateptm(U)
+        ptm_schrodinger = calculateptm(U, heisenberg=false)
+
 
         expected_ptm = [
             [1 0 0 0];
@@ -151,7 +165,8 @@ end
             [0 0 0 1]
         ]
 
-        @test LinearAlgebra.norm(ptm - expected_ptm) < tol
+        @test LinearAlgebra.norm(ptm_heisenberg - expected_ptm) < tol
+        @test LinearAlgebra.norm(ptm_schrodinger - transpose(expected_ptm)) < tol
     end
 
     #TODO (YT): add tests for two-qubit PauliRotation gates using QuEst.
