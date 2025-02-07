@@ -36,6 +36,16 @@ function _qinds_check(qinds)
     if any(qind -> qind <= 0, qinds)
         throw(ArgumentError("Qubit indices must be positive integers. Got $qinds."))
     end
+
+    if !allunique(qinds)
+        throw(ArgumentError("Qubit indices must be unique. Got $qinds."))
+    end
+
+    if !all(qind -> isa(qind, Integer), qinds)
+        throw(ArgumentError("Qubit indices must be integers. Got $qinds."))
+    end
+
+
 end
 
 function _qinds_check(qind::Integer)
