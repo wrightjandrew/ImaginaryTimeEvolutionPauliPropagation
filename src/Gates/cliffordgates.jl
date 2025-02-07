@@ -1,31 +1,50 @@
 """
-    CliffordGate(symbol::Symbol, qinds::Vector{Int})
+    
 
-A Clifford gate with the name `symbol` acting on the qubits `qinds`.
-`symbol` needs to match any of the implemented Clifford gates in the global `clifford_map`.
+
 """
 struct CliffordGate <: StaticGate
     symbol::Symbol
     qinds::Vector{Int}
-end
 
-"""
-    CliffordGate(symbol::Symbol, qind::Int)
+    @doc """
+        CliffordGate(symbol::Symbol, qinds::Vector{Int})
+        CliffordGate(symbol::Symbol, qinds::Int)
 
-Constructor for a single-qubit `CliffordGate`.
-"""
-function CliffordGate(symbol::Symbol, qind::Int)
-    return CliffordGate(symbol, [qind])
-end
+    A Clifford gate with the name `symbol` acting on the qubits `qinds`.
+    `symbol` needs to match any of the implemented Clifford gates in the global `clifford_map`.
+    `qinds` can be a single integer, a vector of integers, or anything that transforms into a vector
+    via `vec(collect(qinds))`.
+    """
+    function CliffordGate(symbol::Symbol, qinds)
 
-"""
-    CliffordGate(symbol::Symbol, qinds::Tuple{Int...})
+        # accept anything that can be converted to a vector of integers
+        qinds = vec(collect(qinds))
 
-Constructor for a `CliffordGate` acting on the qubits `qinds`. 
-Converts the types of `qinds` to the correct types for `CliffordGate`.
-"""
-function CliffordGate(symbol::Symbol, qinds::Union{AbstractArray,Tuple,Base.Generator})
-    return CliffordGate(symbol, collect(qinds))
+        # check that the qubit indices are positive integers
+        if any(qind -> qind <= 0, qinds)
+            throw(ArgumentError("Qubit indices must be positive integers."))
+        end
+
+        # check that the symbol is a key in the clifford_map
+        if !haskey(clifford_map, symbol)
+            throw(ArgumentError(
+                "Symbol $symbol is not a key in the global `clifford_map``. " *
+                "Check for typos or define this Clifford gate."
+            ))
+        end
+
+        # check that the number of active qubits matches the clifford map
+        nq = length(qinds)
+        if 4^nq != length(clifford_map[symbol])
+            throw(ArgumentError(
+                "The passed qinds=$qinds act on $nq qubit(s), but the lookup map for $symbol " *
+                "acts on $(Int(log(4, length(clifford_map[symbol])))) qubit(s)."
+            ))
+        end
+
+        return new(symbol, qinds)
+    end
 end
 
 
@@ -50,7 +69,7 @@ const _default_clifford_map = Dict{Symbol,Vector{Tuple{UInt8,Int64}}}(
     clifford_map
 
 Global dictionary of Clifford gates and their action on Pauli strings.
-Currently supported Clifford gates are `:H`, `:X`, `:Y`, `:Z`, `:S`, `:CNOT`, `:ZZpihalf`, and `:SWAP`.
+Currently supported Clifford gates are `:H`, `:X`, `:Y`, `:Z`, `:SX`, `:SY`, `:S` (`:SZ`) , `:CNOT`, `:CZ`, :ZZpihalf`, and `:SWAP`.
 If one indexes into the returned arrays with the integer that corresponds to the partial Pauli string,
 the returned tuple is `(sign, partial_pstr)` where `sign` is the sign change and `partial_pstr` is the new partial Pauli string.
 """
