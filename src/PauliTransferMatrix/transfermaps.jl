@@ -5,7 +5,6 @@
 ###
 
 
-
 """
     totransfermap(nq::Integer, circuit::Vector{Gate}, thetas=nothing)
 

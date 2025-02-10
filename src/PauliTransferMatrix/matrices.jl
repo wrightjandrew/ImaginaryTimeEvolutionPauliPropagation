@@ -5,6 +5,25 @@
 ###
 
 """
+    function _check_unitary(mat)
+
+Check if a matrix is unitary.
+Arguments
+- `mat::Matrix`: The evolutioin gate matrix.
+
+Returns
+- `Bool`: Whether the matrix is unitary.
+"""
+function _check_unitary(mat)
+    if isapprox(mat * mat', Matrix{ComplexF64}(I, size(mat, 1), size(mat, 1))) &&
+        isapprox(mat' * mat, Matrix{ComplexF64}(I, size(mat, 2), size(mat, 2)))
+        return true
+    else
+        return false
+    end
+end
+
+"""
     function calculateptm(mat; tol=1e-15, heisenberg=true)
 
 Calculate the Pauli Transfer Matrix (PTM) of a matrix `mat`. 
@@ -13,7 +32,7 @@ Note, by default the PTM is calculated in the -> Heisenberg picture <-,
 i.e., the PTM is that of the conjugate transpose of the  matrix.
 This can be changed via the `heisenberg::Bool` keyword argument.
 Arguments
-- `mat::Matrix`: The unitary matrix for which the PTM is calculated.
+- `mat::Matrix`: The evolutioin gate matrix for which the PTM is calculated.
 - `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
 - `heisenberg::Bool=true`: Whether the PTM is calculated in the Heisenberg picture. 
 
@@ -33,15 +52,16 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
         flush(stderr)
     end
 
-    # Initialize the PTM as complex
-    # Later we will see if the PTM is real
-    # TODO: Can we determine this directly from `mat`?
-    ptm = zeros(ComplexF64, 4^nqubits, 4^nqubits)
+    if _check_unitary(mat)
+        ptm = zeros(Float64, 4^nqubits, 4^nqubits)
+    else
+        ptm = zeros(ComplexF64, 4^nqubits, 4^nqubits)
+    end
 
     # The pauli basis vector is defined to be consistent with index of the pstr
     pauli_basis_vec = getpaulibasis(nqubits)
 
-    # TODO: sparse PTMs?
+    # TODO: sparse PTMs might be useful for compiled circuits with many qubits.
     for i in 1:4^nqubits
         for j in 1:4^nqubits
             # The PTM is defined by evolving P_j and taking the overlap with P_i
@@ -56,6 +76,9 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
             # truncate small values
             if abs(val) < tol
                 continue
+            # we don't want to unnecessarily return a complex PTM
+            elseif imag(val) < tol
+                val = real(val)
             end
 
             ptm[i, j] = val
@@ -64,11 +87,6 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
 
     if heisenberg
         ptm = transpose(ptm)
-    end
-
-    # we don't want to unnecessarily return a complex PTM
-    if all(imag(ptm) .≈ 0)
-        ptm = real(ptm)
     end
 
     return ptm
