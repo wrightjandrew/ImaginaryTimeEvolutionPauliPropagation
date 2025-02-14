@@ -18,11 +18,12 @@ Arguments
 - `mat::Matrix`: The evolutioin gate matrix for which the PTM is calculated.
 - `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
 - `heisenberg::Bool=true`: Whether the PTM is calculated in the Heisenberg picture. 
+- `dtype::DataType=ComplexF64`: Default type for a real PTM is `Float64`.
 
 Returns
 - `ptm::Matrix`: The PTM of the conjugate transpose of matrix `mat`.
 """
-function calculateptm(mat; tol=1e-15, heisenberg=true)
+function calculateptm(mat; tol=1e-15, heisenberg=true, dtype=Float64)
     mat_dag = mat'
 
     nqubits = Int(log(2, size(mat_dag)[1]))
@@ -36,7 +37,7 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
     end
 
     # PTM is always real in Pauli basis but can be complex in general basis.
-    ptm = zeros(ComplexF64, 4^nqubits, 4^nqubits)
+    ptm = zeros(dtype, 4^nqubits, 4^nqubits)
 
     # The pauli basis vector is defined to be consistent with index of the pstr
     pauli_basis_vec = getpaulibasis(nqubits)
@@ -58,17 +59,17 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
                 continue
             end
 
+            # truncate small complex components
+            if imag(val) < tol
+                val = real(val)
+            end
+
             ptm[i, j] = val
         end
     end
 
     if heisenberg
         ptm = transpose(ptm)
-    end
-
-    # we don't want to unnecessarily return a complex PTM
-    if all(imag(ptm) .< tol)
-        ptm = real(ptm)
     end
 
     return ptm
