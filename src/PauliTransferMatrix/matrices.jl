@@ -4,30 +4,13 @@
 ##
 ###
 
-"""
-    function _check_unitary(mat)
-
-Check if a matrix is unitary.
-Arguments
-- `mat::Matrix`: The evolutioin gate matrix.
-
-Returns
-- `Bool`: Whether the matrix is unitary.
-"""
-function _check_unitary(mat)
-    if isapprox(mat * mat', Matrix{ComplexF64}(I, size(mat, 1), size(mat, 1))) &&
-        isapprox(mat' * mat, Matrix{ComplexF64}(I, size(mat, 2), size(mat, 2)))
-        return true
-    else
-        return false
-    end
-end
 
 """
     function calculateptm(mat; tol=1e-15, heisenberg=true)
 
 Calculate the Pauli Transfer Matrix (PTM) of a matrix `mat`. 
-If `mat` is the matrix exponential of a (anti-)Hermitian matrix, the PTM will be real-valued. Otherwise it can be complex.
+The PTM will be real-valued in the Pauli basis. However, it can be complex in the general basis.
+We truncate small complex components and abs values in the PTM using the `tol` parameter.
 Note, by default the PTM is calculated in the -> Heisenberg picture <-, 
 i.e., the PTM is that of the conjugate transpose of the  matrix.
 This can be changed via the `heisenberg::Bool` keyword argument.
@@ -52,11 +35,8 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
         flush(stderr)
     end
 
-    if _check_unitary(mat)
-        ptm = zeros(Float64, 4^nqubits, 4^nqubits)
-    else
-        ptm = zeros(ComplexF64, 4^nqubits, 4^nqubits)
-    end
+    # PTM is always real in Pauli basis but can be complex in general basis.
+    ptm = zeros(ComplexF64, 4^nqubits, 4^nqubits)
 
     # The pauli basis vector is defined to be consistent with index of the pstr
     pauli_basis_vec = getpaulibasis(nqubits)
@@ -76,9 +56,6 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
             # truncate small values
             if abs(val) < tol
                 continue
-            # we don't want to unnecessarily return a complex PTM
-            elseif imag(val) < tol
-                val = real(val)
             end
 
             ptm[i, j] = val
@@ -87,6 +64,11 @@ function calculateptm(mat; tol=1e-15, heisenberg=true)
 
     if heisenberg
         ptm = transpose(ptm)
+    end
+
+    # we don't want to unnecessarily return a complex PTM
+    if all(imag(ptm) .< tol)
+        ptm = real(ptm)
     end
 
     return ptm
