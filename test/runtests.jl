@@ -27,11 +27,15 @@ using Random
 
     include("test_frozengates.jl")
 
+    include("test_miscgates.jl")
+
     include("test_overlaps.jl")
 
     include("test_paulirotations.jl")
 
     include("test_paulioperations.jl")
+
+    include("test_paulitransfermaps.jl")
 
     include("test_truncations.jl")
 
