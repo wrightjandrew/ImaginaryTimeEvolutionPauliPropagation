@@ -7,9 +7,11 @@
 
 """
     function calculateptm(mat; tol=1e-15, heisenberg=true)
+    function calculateptm(dtype, mat; tol=1e-15, heisenberg=true)
 
 Calculate the Pauli Transfer Matrix (PTM) of a matrix `mat`. 
-The PTM will be real-valued in the Pauli basis. However, it can be complex in the general basis.
+The PTM will be real-valued in the Pauli basis. However, it can be complex in a general basis.
+Pass an optional data type `dtype` when entries are not floats.
 We truncate small complex components and abs values in the PTM using the `tol` parameter.
 Note, by default the PTM is calculated in the -> Heisenberg picture <-, 
 i.e., the PTM is that of the conjugate transpose of the  matrix.
@@ -18,12 +20,12 @@ Arguments
 - `mat::Matrix`: The evolutioin gate matrix for which the PTM is calculated.
 - `tol::Float64=1e-15`: The tolerance for dropping small values in the PTM.
 - `heisenberg::Bool=true`: Whether the PTM is calculated in the Heisenberg picture. 
-- `dtype::DataType=ComplexF64`: Default type for a real PTM is `Float64`.
+- `dtype::DataType`: Default type for a real PTM is `Float64`.
 
 Returns
 - `ptm::Matrix`: The PTM of the conjugate transpose of matrix `mat`.
 """
-function calculateptm(mat; tol=1e-15, heisenberg=true, dtype=Float64)
+function calculateptm(::Type{T}, mat; tol=1e-15, heisenberg=true) where {T<:Number}
     mat_dag = mat'
 
     nqubits = Int(log(2, size(mat_dag)[1]))
@@ -37,7 +39,7 @@ function calculateptm(mat; tol=1e-15, heisenberg=true, dtype=Float64)
     end
 
     # PTM is always real in Pauli basis but can be complex in general basis.
-    ptm = zeros(dtype, 4^nqubits, 4^nqubits)
+    ptm = zeros(T, 4^nqubits, 4^nqubits)
 
     # The pauli basis vector is defined to be consistent with index of the pstr
     pauli_basis_vec = getpaulibasis(nqubits)
@@ -49,11 +51,6 @@ function calculateptm(mat; tol=1e-15, heisenberg=true, dtype=Float64)
             # i.e., how much does each Pauli transform into outer Paulis.
             val = tr(pauli_basis_vec[i] * mat * pauli_basis_vec[j] * mat_dag)
 
-            # the common case that elements are 1.0 can cause floats like 0.9999....
-            if val ≈ 1.0
-                val = 1.0
-            end
-
             # truncate small values
             if abs(val) < tol
                 continue
@@ -62,6 +59,11 @@ function calculateptm(mat; tol=1e-15, heisenberg=true, dtype=Float64)
             # truncate small complex components
             if imag(val) < tol
                 val = real(val)
+            end
+
+            # the common case that elements are 1.0 can cause floats like 0.9999....
+            if val ≈ 1.0
+                val = one(val)
             end
 
             ptm[i, j] = val
@@ -73,6 +75,10 @@ function calculateptm(mat; tol=1e-15, heisenberg=true, dtype=Float64)
     end
 
     return ptm
+end
+
+function calculateptm(mat; tol=1e-15, heisenberg=true)
+    return calculateptm(Float64, mat; tol=tol, heisenberg=heisenberg)
 end
 
 
