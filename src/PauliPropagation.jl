@@ -69,7 +69,6 @@ export
     FrozenGate,
     freeze,
     TGate,
-    U1Gate,
     TransferMapGate,
     tomatrix
 
