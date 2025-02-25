@@ -26,6 +26,7 @@ export
     inttosymbol,
     symboltoint,
     inttostring,
+    ispauli,
     getpauli,
     setpauli,
     show,

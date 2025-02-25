@@ -26,7 +26,7 @@ end
 
 Returns an integer Pauli string of the same type as `pstr` with all Paulis set to identity.
 """
-function identitylike(pstr::TT) where {TT<:PauliStringType}
+function identitylike(::TT) where {TT<:PauliStringType}
     return identitypauli(TT)
 end
 
@@ -135,14 +135,48 @@ end
 
 Maps a single symbol to its corresponding integer representation.
 """
-symboltoint(pauli::Symbol) = findfirst(s -> s == pauli, pauli_symbols) - 1
+function symboltoint(pauli::Symbol)
+
+    ind = findfirst(s -> s == pauli, pauli_symbols)
+    if isnothing(ind)
+        throw(ArgumentError("Symbol $pauli is not a valid Pauli symbol."))
+    end
+    return ind - 1
+end
 
 """
     inttosymbol(pauli::PauliType)
 
 Maps an integer Pauli to its corresponding symbol.
 """
-inttosymbol(pauli::PauliType) = pauli_symbols[pauli+1]
+function inttosymbol(pauli::PauliType)
+    if !(0 <= pauli <= 3)
+        throw(ArgumentError("Pauli $pauli is not a valid Pauli integer."))
+    end
+    return pauli_symbols[pauli+1]
+end
+
+
+## testing for equality between integer and symbol representations
+"""
+    ispauli(pauli1::Symbol, pauli2::PauliType)
+    ispauli(pauli1::PauliType, pauli2::Symbol)
+
+Check if two Paulis are equal, where one is given as a symbol and the other as an integer.
+"""
+function ispauli(pauli1::Symbol, pauli2::TT) where {TT<:PauliType}
+    return symboltoint(pauli1) == pauli2
+end
+
+function ispauli(pauli1::TT, pauli2::Symbol) where {TT<:PauliType}
+    return ispauli(pauli2, pauli1)
+end
+
+function ispauli(pauli1, pauli2)
+    # technically we should to some checks here
+    return pauli1 == pauli2
+end
+
 
 ## get and set functions
 
