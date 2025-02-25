@@ -19,6 +19,7 @@ export
     topaulistrings,
     add!,
     set!,
+    mult!,
     empty!,
     identitypauli,
     identitylike,

@@ -68,7 +68,7 @@ function symboltoint(nqubits::Integer, paulis, qinds)
 
     # check that qinds are in the correct range 1 <= qind <= nqubits
     if any(qind -> !(1 <= qind <= nqubits), qinds)
-        throw(ArgumentError("Indices `qinds` should be in the range 1 <= ... <= nqubits. Got `qinds`=$(qinds)."))
+        throw(ArgumentError("Indices `qinds` should be in the range 1 <= ... <= nqubits=$nqubits. Got `qinds`=$(qinds)."))
     end
 
     # check that indices are unique, which is otherwise likely unintended
