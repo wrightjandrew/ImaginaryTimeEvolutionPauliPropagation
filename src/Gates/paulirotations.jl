@@ -60,6 +60,34 @@ function PauliRotation(symbols, qinds, theta)
     return FrozenGate(PauliRotation(symbols, qinds), theta)
 end
 
+
+"""
+    tomatrix(gate::PauliRotation, theta)
+
+Compute the unitary matrix for the `PauliRotation` gate with parameter `theta` in the computational 0/1 basis.
+This is done by computing the matrix `U = cos(θ/2) I - i sin(θ/2) P` where `P` is the Pauli matrix corresponding to the `symbols`.
+The returned unitary is returned in Schrödinger picture form. 
+"""
+function tomatrix(gate::PauliRotation, theta)
+
+    nqubits = length(gate.qinds)
+    pauli_basis_vec = getpaulibasis(nqubits)
+
+    # The indices of the pauli matrix are sorted in ascending order
+    sorted_indices = sortperm(gate.qinds)
+    pauli = gate.symbols[sorted_indices]
+
+    # These pauli matrices are normalized by sqrt(2)^nqubits
+    pauli_mat = sqrt(2)^nqubits * pauli_basis_vec[symboltoint(pauli)+1]
+
+    id = I(2^nqubits)
+
+    U = cos(theta / 2) * id - 1.0im * sin(theta / 2) * pauli_mat
+
+    return U
+end
+
+
 """
     MaskedPauliRotation(symbols::Vector{Symbol}, qinds::Vector{Int}, term::PauliStringType)
 

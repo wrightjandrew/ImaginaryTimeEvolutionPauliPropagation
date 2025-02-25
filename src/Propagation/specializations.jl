@@ -192,6 +192,21 @@ function applytoall!(gate::TGate, thetas, psum, aux_psum; kwargs...)
     return applytoall!(PauliRotation(:Z, gate.qind), π / 4, psum, aux_psum; kwargs...)
 end
 
+## TransferMapGate
+"""
+    apply(gate::TransferMapGate, pstr, coeff)
+
+Apply a `TransferMapGate` to an integer Pauli string and its coefficient.
+The outcomes are determined by the `transfer_map` of the gate.
+"""
+function PauliPropagation.apply(gate::TransferMapGate, pstr, coeff)
+    # the Paulis packed into the integer are used to index into the transfer map
+    pauli_int = getpauli(pstr, gate.qinds)
+    pstrs_and_factors = gate.transfer_map[pauli_int+1]
+    # the new pstrs are the new Paulis that need to be set and the coefficients need to be multiplied with the factors
+    return Tuple((setpauli(pstr, new_pstr, gate.qinds), coeff * factor) for (new_pstr, factor) in pstrs_and_factors)
+end
+
 ### Frozen Gates
 """
     applytoall!(gate::FrozenGate, thetas, psum, aux_psum; kwargs...)

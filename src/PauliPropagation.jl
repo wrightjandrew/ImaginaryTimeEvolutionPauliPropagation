@@ -17,6 +17,7 @@ export
     numcoefftype,
     getcoeff,
     topaulistrings,
+    mult!,
     add!,
     set!,
     mult!,
@@ -40,6 +41,11 @@ export
     commutator,
     getinttype
 
+include("PauliTransferMatrix/PauliTransferMatrix.jl")
+export
+    getpaulibasis,
+    calculateptm,
+    totransfermap
 
 include("Gates/Gates.jl")
 export
@@ -64,7 +70,9 @@ export
     AmplitudeDampingNoise,
     FrozenGate,
     freeze,
-    TGate
+    TGate,
+    TransferMapGate,
+    tomatrix
 
 include("Circuits/Circuits.jl")
 export
