@@ -156,25 +156,23 @@ function inttosymbol(pauli::PauliType)
     return pauli_symbols[pauli+1]
 end
 
+# trivial functions that return the if it is already in the correct type
+symboltoint(pauli::PauliStringType) = pauli
+# TODO: we might want versions for tuples, arrays and vectors
+inttosymbol(pauli::Symbol) = pauli
+
 
 ## testing for equality between integer and symbol representations
 """
-    ispauli(pauli1::Symbol, pauli2::PauliType)
-    ispauli(pauli1::PauliType, pauli2::Symbol)
+    ispauli(pauli1::Union{Symbol, PauliType}, pauli2::Union{Symbol, PauliType})
+    
+    ispauli(pauli1::Union{Vector{Symbol}, PauliStringType}, pauli2::Union{Vector{Symbol}, PauliStringType})
 
 Check if two Paulis are equal, where one is given as a symbol and the other as an integer.
 """
-function ispauli(pauli1::Symbol, pauli2::TT) where {TT<:PauliType}
-    return symboltoint(pauli1) == pauli2
-end
-
-function ispauli(pauli1::TT, pauli2::Symbol) where {TT<:PauliType}
-    return ispauli(pauli2, pauli1)
-end
-
 function ispauli(pauli1, pauli2)
-    # technically we should to some checks here
-    return pauli1 == pauli2
+    # always convert to integer representation
+    return symboltoint(pauli1) == symboltoint(pauli2)
 end
 
 
