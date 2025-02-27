@@ -26,7 +26,7 @@ end
 
 Returns an integer Pauli string of the same type as `pstr` with all Paulis set to identity.
 """
-function identitylike(pstr::TT) where {TT<:PauliStringType}
+function identitylike(::TT) where {TT<:PauliStringType}
     return identitypauli(TT)
 end
 
@@ -61,12 +61,21 @@ Maps a vector of symbols `pstr` acting on the indices `qinds` to an integer Paul
 `qinds` can be any iterable.
 """
 function symboltoint(nqubits::Integer, paulis, qinds)
+    # whatever type these are, they should be the same length
     if length(paulis) != length(qinds)
         throw(ArgumentError("Length of `paulis=$(length(paulis))` and `qinds`=$(length(qinds)) should be the same."))
     end
-    if nqubits < maximum(qinds)
-        throw(ArgumentError("Indices in `qinds`=$qinds acts on more qubits than `nqubits`=$nqubits."))
+
+    # check that qinds are in the correct range 1 <= qind <= nqubits
+    if any(qind -> !(1 <= qind <= nqubits), qinds)
+        throw(ArgumentError("Indices `qinds` should be in the range 1 <= ... <= nqubits=$nqubits. Got `qinds`=$(qinds)."))
     end
+
+    # check that indices are unique, which is otherwise likely unintended
+    if length(qinds) != length(Set(qinds))
+        throw(ArgumentError("Indices `qinds` should be unique. Got `qinds`=$(qinds)."))
+    end
+
     TT = getinttype(nqubits)
     return symboltoint(TT, paulis, qinds)
 end
@@ -126,14 +135,46 @@ end
 
 Maps a single symbol to its corresponding integer representation.
 """
-symboltoint(pauli::Symbol) = findfirst(s -> s == pauli, pauli_symbols) - 1
+function symboltoint(pauli::Symbol)
+
+    ind = findfirst(s -> s == pauli, pauli_symbols)
+    if isnothing(ind)
+        throw(ArgumentError("Symbol $pauli is not a valid Pauli symbol."))
+    end
+    return ind - 1
+end
 
 """
     inttosymbol(pauli::PauliType)
 
 Maps an integer Pauli to its corresponding symbol.
 """
-inttosymbol(pauli::PauliType) = pauli_symbols[pauli+1]
+function inttosymbol(pauli::PauliType)
+    if !(0 <= pauli <= 3)
+        throw(ArgumentError("Pauli $pauli is not a valid Pauli integer."))
+    end
+    return pauli_symbols[pauli+1]
+end
+
+# trivial functions that return the if it is already in the correct type
+symboltoint(pauli::PauliStringType) = pauli
+# TODO: we might want versions for tuples, arrays and vectors
+inttosymbol(pauli::Symbol) = pauli
+
+
+## testing for equality between integer and symbol representations
+"""
+    ispauli(pauli1::Union{Symbol, PauliType}, pauli2::Union{Symbol, PauliType})
+    
+    ispauli(pauli1::Union{Vector{Symbol}, PauliStringType}, pauli2::Union{Vector{Symbol}, PauliStringType})
+
+Check if two Paulis are equal, where one is given as a symbol and the other as an integer.
+"""
+function ispauli(pauli1, pauli2)
+    # always convert to integer representation
+    return symboltoint(pauli1) == symboltoint(pauli2)
+end
+
 
 ## get and set functions
 
