@@ -52,11 +52,12 @@ Default truncations are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins
 A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
 Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
+function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, normalization=false, kwargs...)
 
     # if circ is actually a single gate, promote it to a list [gate]
     # similarly the theta if it is a single number
     circ, thetas = _promotecircandthetas(circ, thetas)
+    println("here")
 
     # if thetas is nothing, the circuit must contain only StaticGates
     # also check if the length of thetas equals the number of parametrized gates
@@ -73,7 +74,7 @@ function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e
     # - verbose option  
     # - more elegant param_idx incrementation
     for gate in reverse(circ)
-        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, kwargs...)
+        psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, normalization, kwargs...)
     end
     return psum
 end
@@ -86,7 +87,7 @@ end
 and merges everything back into `psum`. Truncations are checked here after merging.
 This function can be overwritten for a custom gate if the lower-level functions `applytoall!`, `applyandadd!`, and `apply` are not sufficient.
 """
-function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
+function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, normalization=false, kwargs...)
 
     # Pick out the next theta if gate is a ParametrizedGate.
     # Else set the paramter to nothing for clarity that theta is not used.
@@ -105,6 +106,10 @@ function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight
     # Any contents of psum and aux_psum are merged into the larger of the two, which is returned as psum.
     # The other is emptied and returned as aux_psum.
     psum, aux_psum = mergeandempty!(psum, aux_psum)
+
+    if normalization
+        psum = mult!(psum, 1/((2^nq)*getcoeff(psum, :I, 1)))
+    end
 
     # Check truncation conditions on all Pauli strings in psum and remove them if they are truncated.
     checktruncationonall!(psum; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc)
