@@ -15,7 +15,8 @@ For example, if you are working with a Jupyter notebook, run
 using Pkg
 Pkg.add(url="https://github.com/MSRudolph/PauliPropagation.jl.git")
 ```
-where you can use the keyword `rev="branchname"` to install the version on a particular branch if you want to contribute to the package.
+where you can use the keyword `rev="branchname"` to install development versions of the package.
+We don't recommend using branches other than `main` or `dev`.
 
 ### Clone repository and install locally 
 Navigate to a local directory where you want to clone this repository into and run the following in a terminal
@@ -78,8 +79,8 @@ overlapwithzero(pauli_sum)
 
 ## Important Notes and Caveats
 All of the following points can be addressed by you writing the necessary missing code due to the nice extensibility of Julia.
-- The package is tested for Julia `1.10`.
-- The default is the Heisenberg _backpropagation_ (with Schrödinger propagation coming soon).
+- The package is tested for Julia `1.10` and `1.11`.
+- The default is the Heisenberg _backpropagation_. Schrödinger propagation may soon be natively supported but there are options to transpose `PauliRotation` gates by multiplying their angles with `-1` and `CliffordGate`s by using `transposecliffordmap()`.
 - We currently do not support the strong simulation of quantum states in non-exponential time (even for Stabilizer states).
 - Sampling quantum states is currently not supported.
 - Many underlying data structures and functions can be used for other purposes involving Pauli operators.
@@ -89,7 +90,6 @@ This package is still work-in-progress. You will probably find certain features 
 Here are some features that we want to implement in the future. Feel free to contribute!
 - **A documentation website!**
 - **Easier Schrödinger picture propagation**. Currently, the default is Heisenberg and there is no easy way to transpose the gates.
-- **Gates with several parameters**. Currently, each parametrized gate takes exactly one parameter. Multi-parameter gates have to be decomposed.
 - **A fast and flexible Surrogate version**. Currently, we provide a version of the Pauli propagation Surrogate that is _good_ and _works_, at least for Pauli gates and Clifford gates. Stay tuned for a whole lot more.
 
 ## How to contribute
@@ -120,4 +120,7 @@ Some of the developers of this package are co-authors in the following papers us
 - [Classical surrogate simulation of quantum systems with LOWESA](https://arxiv.org/abs/2308.09109)
 - [Quantum Convolutional Neural Networks are (Effectively) Classically Simulable](https://arxiv.org/abs/2408.12739)
 - [Classically estimating observables of noiseless quantum circuits](https://arxiv.org/abs/2409.01706)
+- [Efficient quantum-enhanced classical simulation for patches of quantum landscapes](https://arxiv.org/abs/2411.19896)
+- [Simulating quantum circuits with arbitrary local noise using Pauli Propagation](https://arxiv.org/abs/2501.13101)
+  
 And more are coming up.

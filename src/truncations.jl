@@ -125,8 +125,8 @@ The damping factor `gamma` controls the exponential decay.
 truncatedampingcoeff(pstr, 0.8, 0.5, 0.01)
 """
 function truncatedampingcoeff(
-    pstr::PauliStringType, coeff::Real, gamma::Real, min_abs_coeff::Real
+    pstr::PauliStringType, coeff, gamma::Real, min_abs_coeff::Real
 )
 
-    return abs(coeff) * exp(-gamma * countweight(pstr)) < min_abs_coeff
+    return abs(tonumber(coeff)) * 10.0^(-gamma * countweight(pstr)) < min_abs_coeff
 end

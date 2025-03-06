@@ -1,4 +1,11 @@
-function paulinoise(nq, nl, W, min_abs_coeff)
+using Test
+
+@testset "Test Pauli Noise" begin
+    nq = 8
+    nl = 4
+    W = Inf
+    min_abs_coeff = 0.0
+
     opind = rand(1:nq)
     pstr = PauliString(nq, :Z, opind)
 
@@ -12,7 +19,7 @@ function paulinoise(nq, nl, W, min_abs_coeff)
 
     where_ind = rand(1:m)
     q_ind = opind
-    noise_p = randn() * 0.2
+    noise_p = rand() * 0.2
     insert!(depolarizing_circ, where_ind, DepolarizingNoise(q_ind))
     insert!(pauli_circ, where_ind, PauliZNoise(q_ind))
     insert!(pauli_circ, where_ind, PauliYNoise(q_ind))
@@ -30,10 +37,16 @@ function paulinoise(nq, nl, W, min_abs_coeff)
 
     dnum2 = propagate(pauli_circ, pstr, thetas2; max_weight=W, min_abs_coeff=min_abs_coeff)
 
-    return overlapwithzero(dnum1) ≈ overlapwithzero(dnum2)
+    @test overlapwithzero(dnum1) ≈ overlapwithzero(dnum2)
 end
 
-function dephasingnoise(nq, nl, W, min_abs_coeff)
+
+@testset "Test Dephasing Noise" begin
+    nq = 8
+    nl = 4
+    W = Inf
+    min_abs_coeff = 0.0
+
     opind = rand(1:nq)
     pstr = PauliString(nq, :Z, opind)
 
@@ -47,7 +60,7 @@ function dephasingnoise(nq, nl, W, min_abs_coeff)
 
     where_ind = rand(1:m)
     q_ind = opind
-    noise_p = randn() * 0.2
+    noise_p = rand() * 0.2
     insert!(dephasing_circ, where_ind, DephasingNoise(q_ind))
     insert!(pauli_circ, where_ind, PauliYNoise(q_ind))
     insert!(pauli_circ, where_ind, PauliXNoise(q_ind))
@@ -63,5 +76,5 @@ function dephasingnoise(nq, nl, W, min_abs_coeff)
 
     dnum2 = propagate(pauli_circ, pstr, thetas2; max_weight=W, min_abs_coeff=min_abs_coeff)
 
-    return overlapwithzero(dnum1) ≈ overlapwithzero(dnum2)
+    @test overlapwithzero(dnum1) ≈ overlapwithzero(dnum2)
 end

@@ -14,6 +14,14 @@ struct PauliString{TT<:PauliStringType,CT}
     nqubits::Int
     term::TT
     coeff::CT
+
+    function PauliString(nqubits::Int, term::TT, coeff::CT) where {TT<:PauliStringType,CT}
+        if nqubits <= 0
+            throw(ArgumentError("Number of qubits must be a positive integer."))
+        end
+
+        return new{TT,CT}(nqubits, term, coeff)
+    end
 end
 
 """
@@ -24,10 +32,15 @@ Constructor for a `PauliString` on `nqubits` qubits from a `Symbol` (:I, :X, :Y,
 Provide the index or indices for those symbols as `qind` or `qinds`.
 The coefficient of the Pauli string in the Pauli sum defaults to 1.0.
 """
-function PauliString(nqubits::Int, paulis::Union{Symbol,Vector{Symbol}}, qinds, coeff=1.0)
-    pauli = symboltoint(nqubits, paulis, qinds)
-    coeff = _convertcoefficients(coeff)
-    return PauliString(nqubits, pauli, coeff)
+function PauliString(nqubits::Int, paulis, qinds, coeff=1.0)
+
+    # `symboltoint()` also does checks, but we want to catch them here.
+    term = symboltoint(nqubits, paulis, qinds)
+
+    # In case an integer is passed, we probably want it to be a float.
+    coeff = float(coeff)
+
+    return PauliString(nqubits, term, coeff)
 end
 
 """
@@ -52,10 +65,10 @@ end
     numcoefftype(pstr::PauliString)
 
 Get the type of the numerical coefficient of a `PauliString`. 
-Will get the type of the `coeff` field of a potential PathProperties type.
+Will return the type of the output of  `tonumber(pstr.coeff)`.
 """
 function numcoefftype(pstr::PauliString)
-    return numcoefftype(pstr.coeff)
+    return typeof(tonumber(pstr.coeff))
 end
 
 
@@ -93,6 +106,14 @@ It is a wrapper around a dictionary Dict(Pauli string => coefficient}, where the
 struct PauliSum{TT,CT}
     nqubits::Int
     terms::Dict{TT,CT}
+
+    function PauliSum(nq::Int, terms::Dict{TT,CT}) where {TT,CT}
+        if nq <= 0
+            throw(ArgumentError("Number of qubits must be a positive integer."))
+        end
+
+        return new{TT,CT}(nq, terms)
+    end
 end
 
 """
@@ -121,17 +142,11 @@ function PauliSum(nqubits::Int, psum::Dict{Vector{Symbol},CT}) where {CT}
 
     _checknumberofqubits.(nqubits, keys(psum))
     TT = getinttype(nqubits)
-    int_dict = Dict{TT,CT}(symboltoint(k) => _convertcoefficients(v) for (k, v) in psum)
+    int_dict = Dict{TT,CT}(symboltoint(k) => float(v) for (k, v) in psum)
 
     return PauliSum(nqubits, int_dict)
 end
 
-"""
-    PauliSum(psum::PauliSum)
-
-Trivial constructor for a `PauliSum` on `nqubits` qubits from a `PauliSum`. Returns the same `PauliSum` and does not copy.
-"""
-PauliSum(psum::PauliSum) = psum
 
 """
     PauliSum(pstr::PauliString)
@@ -157,8 +172,15 @@ Constructor for a `PauliSum` on `nqubits` qubits from a `PauliString`.
 """
 function PauliSum(pstrs::Union{AbstractArray,Tuple,Base.Generator})
     _checknumberofqubits(pstrs)
+
     nq = first(pstrs).nqubits
-    return PauliSum(nq, Dict(pstr.term => pstr.coeff for pstr in pstrs))
+    # TODO: figure out type what to do when type of coefficients is not the same
+    psum = PauliSum(nq, coefftype(first(pstrs)))
+    sizehint!(psum.terms, length(pstrs))
+    for pstr in pstrs
+        add!(psum, pstr)
+    end
+    return psum
 end
 
 """
@@ -211,18 +233,9 @@ function numcoefftype(psum::PauliSum)
             "Numeric coefficient type cannot be inferred from an empty PauliSum." *
             "Consider defining a `numcoefftype(psum::$(typeof(psum)))` method.")
     end
-    return numcoefftype(first(coefficients(psum)))
+    return typeof(tonumber(first(coefficients(psum))))
 end
 
-"""
-    numcoefftype(::Number)
-
-Get the type of the number.
-Can be overloaded for custom wrapper types like `PathProperties`.
-"""
-function numcoefftype(::T) where {T<:Number}
-    return T
-end
 
 # TODO: rename to get() and clean up
 """
@@ -234,7 +247,10 @@ Requires that the integer Pauli string `pstr` is the same type as the integer Pa
 function getcoeff(psum::PauliSum{TT,CT}, pstr::TT) where {TT,CT}
     # TODO: This is not yet compatible with `PathProperties`
     if CT <: PathProperties
-        throw(ArgumentError("This function is not yet compatible with PathProperties."))
+        throw(ArgumentError(
+            "This function is not yet compatible with PathProperties. " *
+            "Try psum.term[pstr]."
+        ))
     end
     return get(psum.terms, pstr, zero(CT))
 end
@@ -248,9 +264,12 @@ Requires that the integer Pauli string in `pstr` is the same type as the integer
 function getcoeff(psum::PauliSum{TT,CT1}, pstr::PauliString{TT,CT2}) where {TT,CT1,CT2}
     # TODO: This is not yet compatible with `PathProperties`
     if CT1 <: PathProperties
-        throw(ArgumentError("This function is not yet compatible with PathProperties."))
+        throw(ArgumentError(
+            "This function is not yet compatible with PathProperties. " *
+            "Try psum.term[pstr.term]."
+        ))
     end
-    return get(psum.terms, pstr.term, zero(CT1))
+    return getcoeff(psum, pstr.term)
 end
 
 
@@ -363,6 +382,38 @@ function ==(psum1::PauliSum, psum2::PauliSum)
     return psum1.terms == psum2.terms
 end
 
+"""
+    ≈(psum1::PauliSum, psum2::PauliSum)
+
+Approximate equality check for `PauliSum`.
+"""
+function Base.:≈(psum1::PauliSum{TT1,CT1}, psum2::PauliSum{TT2,CT2}) where {TT1,CT1,TT2,CT2}
+    if TT1 != TT2
+        return false
+    end
+
+    if psum1.nqubits != psum2.nqubits
+        return false
+    end
+
+    # we don't strictly need to check the length of the dictionaries
+    # small values are allowed for Pauli strings that don't exist in both
+    # our solution is to check for approximate equality both ways
+    for (pstr, coeff) in psum1
+        if !isapprox(get(psum2.terms, pstr, CT2(0.0)), coeff)
+            return false
+        end
+    end
+    for (pstr, coeff) in psum2
+        if !isapprox(get(psum1.terms, pstr, CT1(0.0)), coeff)
+            return false
+        end
+    end
+
+    return true
+end
+
+
 ## Arithmetic operations
 # They all deepcopy
 
@@ -377,14 +428,8 @@ function *(psum::PauliSum, c::Number)
     return ps_copy
 end
 
-"""
-    *(c::Number, psum::PauliSum)
+*(c::Number, psum::PauliSum) = psum * c
 
-Multiply a `PauliSum` by a scalar `c`. This copies the PauliSum.
-"""
-function *(c::Number, psum::PauliSum)
-    return psum * c
-end
 
 """
     /(psum::PauliSum, c::Number)
@@ -396,6 +441,20 @@ function /(psum::PauliSum, c::Number)
     mult!(ps_copy, 1 / c)
     return ps_copy
 end
+
+"""
+    +(psum1::PauliSum, c::Number)
+
+Addition of c * Identity to a `PauliSum`. This copies the PauliSum.
+"""
+function +(psum1::PauliSum{TT,CT}, c::Number) where {TT,CT}
+    psum1 = deepcopy(psum1)
+    add!(psum1, identitypauli(TT), convert(CT, c))
+    return psum1
+end
+
++(c::Number, psum::PauliSum) = psum + c
+
 
 """
     +(pstr1::PauliString{TermType,CoeffType}, pstr2::PauliString{TermType,CoeffType})
@@ -494,7 +553,7 @@ Provide the Pauli string as a `Symbol` (:I, :X, :Y, :Z) or `Vector{Symbol}`.
 Provide the index or indices for those symbols as `qind` or `qinds`.
 The coefficient of the Pauli string in the Pauli sum defaults to 1.0.
 """
-function add!(psum::PauliSum, paulis::Union{Symbol,Vector{Symbol}}, qinds::Union{T,Vector{T}}, coeff=1.0) where {T<:Integer}
+function add!(psum::PauliSum, paulis::Union{Symbol,Vector{Symbol}}, qinds, coeff=1.0)
     return add!(psum, PauliString(psum.nqubits, paulis, qinds, coeff))
 end
 
@@ -625,18 +684,6 @@ function similar(psum::Dict{TT,CT}) where {TT,CT}
     return new_psum
 end
 
-"""
-Converts coefficient to a float-type it it is an integer-type because the Pauli dictionaries need to be strictly typed and will likely become floats during propagation through a circuit.
-"""
-function _convertcoefficients(coeff)
-    if isa(coeff, Integer)
-        return Float64(coeff)
-    elseif isa(coeff, Complex)
-        return Complex{Float64}(coeff)
-    else
-        return coeff
-    end
-end
 
 """
 Checks whether the number of qubits `nqubits` is the same between our datatypes.

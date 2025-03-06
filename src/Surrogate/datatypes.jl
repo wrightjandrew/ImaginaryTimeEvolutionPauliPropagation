@@ -71,14 +71,6 @@ One-argument constructor for `NodePathProperties`. Initializes `nsins`, `ncos`, 
 """
 NodePathProperties(node::CircuitNode) = NodePathProperties(node, 0, 0, 0)
 
-"""
-    numcoefftype(path::NodePathProperties)
-
-Get the type of the numerical coefficient of a `NodePathProperties` object.
-Returns the type of the `cummulative_value` field of the stored `CircuitNode`.
-"""
-numcoefftype(path::NodePathProperties) = typeof(tonumber(path))
-
 
 """
     tonumber(path::NodePathProperties)

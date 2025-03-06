@@ -31,6 +31,40 @@ PauliFreqTracker(coeff::Number) = PauliFreqTracker(float(coeff), 0, 0, 0)
 
 ### Specializations for PauliRotations that incremet the nsins, ncos, and freq
 """
+    applytoall!(gate::PauliRotation, theta, psum, aux_psum; kwargs...)
+
+Overload of `applytoall!` for `PauliRotation` gates acting onto Pauli sums with `PathProperties` coefficients. 
+It fixes the type-instability of the `apply()` function and reduces moving Pauli strings between `psum` and `aux_psum`.
+`psum` and `aux_psum` are merged later.
+"""
+function applytoall!(gate::PauliRotation, theta, psum::PauliSum{TT,PP}, aux_psum; kwargs...) where {TT<:PauliStringType,PP<:PathProperties}
+    # turn the (potentially) PauliRotation gate into a MaskedPauliRotation gate
+    # this allows for faster operations
+    gate = _tomaskedpaulirotation(gate, paulitype(psum))
+
+    # loop over all Pauli strings and their coefficients in the Pauli sum
+    for (pstr, coeff) in psum
+
+        if commutes(gate, pstr)
+            # if the gate commutes with the pauli string, do nothing
+            continue
+        end
+
+        # else we know the gate will split th Pauli string into two
+        pstr, coeff1, new_pstr, coeff2 = splitapply(gate, pstr, coeff, theta; kwargs...)
+
+        # set the coefficient of the original Pauli string
+        set!(psum, pstr, coeff1)
+
+        # set the coefficient of the new Pauli string in the aux_psum
+        # we can set the coefficient because PauliRotations create non-overlapping new Pauli strings
+        set!(aux_psum, new_pstr, coeff2)
+    end
+
+    return
+end
+
+"""
     splitapply(gate::MaskedPauliRotation, pstr::PauliStringType, coeff, theta; kwargs...)
 
 Apply a `MaskedPauliRotation` with an angle `theta` and a coefficient `coeff` to an integer Pauli string,
