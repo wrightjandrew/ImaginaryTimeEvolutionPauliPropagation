@@ -43,7 +43,7 @@ Base.show(io::IO, node::CircuitNode) = print(io, "$(typeof(node))($(length(node.
 """
 Pretty print for `EvalEndNode`
 """
-Base.show(io::IO, node::EvalEndNode) = print(io, "$(typeof(node))(Pauli string=$(inttostring(node.pstr)), coefficient=$(node.coefficient))")
+Base.show(io::IO, node::EvalEndNode) = print(io, "$(typeof(node))(Pauli string=$(node.pstr), coefficient=$(node.coefficient))")
 
 ## PathProperties Type
 """
@@ -70,14 +70,6 @@ Base.show(io::IO, pth::NodePathProperties) = print(io, "NodePathProperties($(typ
 One-argument constructor for `NodePathProperties`. Initializes `nsins`, `ncos`, and `freq` to 0.
 """
 NodePathProperties(node::CircuitNode) = NodePathProperties(node, 0, 0, 0)
-
-"""
-    numcoefftype(path::NodePathProperties)
-
-Get the type of the numerical coefficient of a `NodePathProperties` object.
-Returns the type of the `cummulative_value` field of the stored `CircuitNode`.
-"""
-numcoefftype(path::NodePathProperties) = typeof(tonumber(path))
 
 
 """

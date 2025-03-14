@@ -1,8 +1,18 @@
 using Random
 
 
-function numericalPP(nq, nl, W, min_abs_coeff)
+@testset "Test propagation with known value" begin
 
+    # this has been cross-validated with other libraries
+    expected_value = 0.21720058439757214
+
+    nq = 8
+    nl = 4
+    W = Inf
+    min_abs_coeff = 0.0
+    max_freq = Inf
+
+    # Numerical propagation
     pstr = PauliString(nq, :Z, round(Int, nq / 2))
 
     topo = bricklayertopology(nq; periodic=false)
@@ -15,13 +25,11 @@ function numericalPP(nq, nl, W, min_abs_coeff)
 
     dnum = propagate(circ, pstr, thetas; max_weight=W, min_abs_coeff=min_abs_coeff)
 
-    return overlapwithzero(dnum) # expectation
-end
+    @test overlapwithzero(dnum) ≈ expected_value
 
 
 
-function hybridPP(nq, nl, W, min_abs_coeff, max_freq)
-
+    ## Hybrid propagation with PathProperties
     pstr = PauliString(nq, :Z, round(Int, nq / 2))
 
     wrapped_pstr = wrapcoefficients(pstr, PauliFreqTracker)
@@ -36,12 +44,10 @@ function hybridPP(nq, nl, W, min_abs_coeff, max_freq)
 
     dhyb = propagate(circ, wrapped_pstr, thetas; max_weight=W, max_freq=max_freq, min_abs_coeff=min_abs_coeff)
 
-    return overlapwithzero(dhyb)
-end
+    @test overlapwithzero(dhyb) ≈ expected_value
 
 
-function surrogatePP(nq, nl, W, max_freq)
-
+    ## Surrogate propagation with NodePathProperties
     pstr = PauliString(nq, :Z, round(Int, nq / 2))
 
     wrapped_pstr = wrapcoefficients(pstr, NodePathProperties)
@@ -58,8 +64,9 @@ function surrogatePP(nq, nl, W, max_freq)
     zerofilter!(dsym)  # Filter the nodes that you find relevant
     evaluate!(dsym, thetas)
 
-    return overlapwithzero(dsym)
+    @test overlapwithzero(dsym) ≈ expected_value
 end
+
 
 @testset "Test propagate equivalence" begin
     nq = 6
@@ -140,5 +147,26 @@ end
         @test overlapwithzero(dnum) ≈ overlapwithzero(dhyb)
         @test overlapwithplus(dnum) ≈ overlapwithplus(dhyb)
     end
+
+end
+
+@testset "Test improper truncations" begin
+
+    pstr = PauliString(4, :Z, 2)
+    gate = PauliRotation(:X, 2, randn())
+
+    @test_throws ArgumentError propagate(gate, pstr; max_freq=rand(1:10))
+    @test_throws ArgumentError propagate(gate, pstr; max_sins=rand(1:10))
+    @test_throws ArgumentError propagate(gate, pstr; max_freq=rand(1:10), max_sins=rand(1:10))
+
+    # a PathProperties type that does not track freq or sins
+    struct MyPathProperties <: PathProperties
+        coeff::Float64
+    end
+
+    wpstr = wrapcoefficients(pstr, MyPathProperties)
+    @test_throws ArgumentError propagate(gate, wpstr; max_freq=rand(1:10))
+    @test_throws ArgumentError propagate(gate, wpstr; max_sins=rand(1:10))
+    @test_throws ArgumentError propagate(gate, wpstr; max_freq=rand(1:10), max_sins=rand(1:10))
 
 end

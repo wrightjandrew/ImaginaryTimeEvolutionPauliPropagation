@@ -113,6 +113,8 @@ Overload of `applytoall!` for `PauliNoise` gates with noise strength `p`.
 It changes the coefficients in-place and does not require the `aux_psum`, which stays empty.
 """
 function applytoall!(gate::PauliNoise, p, psum, aux_psum; kwargs...)
+    # check that the noise strength is in the correct range
+    _check_noise_strength(PauliNoise, p)
 
     # loop over all Pauli strings and their coefficients in the Pauli sum
     for (pstr, coeff) in psum
@@ -143,6 +145,8 @@ It fixes the type-instability of the apply() function and reduces moving Pauli s
 `psum` and `aux_psum` are merged later.
 """
 function applytoall!(gate::AmplitudeDampingNoise, gamma, psum, aux_psum; kwargs...)
+    # check that the noise strength is in the correct range
+    _check_noise_strength(AmplitudeDampingNoise, gamma)
 
     # loop over all Pauli strings and their coefficients in the Pauli sum
     for (pstr, coeff) in psum

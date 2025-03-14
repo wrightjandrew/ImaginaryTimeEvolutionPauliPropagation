@@ -20,12 +20,14 @@ export
     mult!,
     add!,
     set!,
+    mult!,
     empty!,
     identitypauli,
     identitylike,
     inttosymbol,
     symboltoint,
     inttostring,
+    ispauli,
     getpauli,
     setpauli,
     show,
@@ -41,7 +43,6 @@ export
 
 include("PauliTransferMatrix/PauliTransferMatrix.jl")
 export
-    getpaulibasis,
     calculateptm,
     totransfermap
 
