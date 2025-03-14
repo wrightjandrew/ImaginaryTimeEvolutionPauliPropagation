@@ -66,15 +66,7 @@ end
 
 
 ## For Pauli Rotations
-
-function splitapply(gate::MaskedPauliRotation, pstr::PauliStringType, coeff::NodePathProperties, theta; kwargs...)
-    coeff1 = _applycos(coeff, theta; kwargs...)
-    new_pstr, sign = getnewpaulistring(gate, pstr)
-    coeff2 = _applysin(coeff, theta, sign; kwargs...)
-
-    return pstr, coeff1, new_pstr, coeff2
-end
-
+# overloads for _applycos and _applysins defined in PathProperties/paulifreqtracker.jl
 function _applycos(path::NodePathProperties, theta, sign=1; param_idx=0, kwargs...)
     return NodePathProperties(_applycos(path.node, theta, sign; param_idx=param_idx), path.nsins, path.ncos + 1, path.freq + 1)
 end
@@ -108,6 +100,32 @@ function merge(node1::CircuitNode, node2::CircuitNode)
 end
 
 ## For Clifford Gates
+
+"""
+    apply(gate::CliffordGate, pstr::PauliStringType, coeff::NodePathProperties)
+
+Apply a `CliffordGate` to an integer Pauli string and `NodePathProperties` coefficient. 
+"""
+function apply(gate::CliffordGate, pstr::PauliStringType, coeff::NodePathProperties; kwargs...)
+    # this array carries the new Paulis + sign for every occuring old Pauli combination
+    map_array = clifford_map[gate.symbol]
+
+    qinds = gate.qinds
+
+    # this integer carries the active Paulis on its bits
+    lookup_int = getpauli(pstr, qinds)
+
+    # this integer can be used to index into the array returning the new Paulis
+    # +1 because Julia is 1-indexed and lookup_int is 0-indexed
+    partial_pstr, sign = map_array[lookup_int+1]
+
+    # insert the bits of the new Pauli into the old Pauli
+    pstr = setpauli(pstr, partial_pstr, qinds)
+
+    coeff = _multiplysign(coeff, sign)
+
+    return pstr, coeff
+end
 
 function _multiplysign(pth::NodePathProperties, sign; kwargs...)
     return NodePathProperties(_multiplysign(pth.node, sign), pth.nsins, pth.ncos, pth.freq)

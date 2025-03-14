@@ -17,14 +17,17 @@ export
     numcoefftype,
     getcoeff,
     topaulistrings,
+    mult!,
     add!,
     set!,
+    mult!,
     empty!,
     identitypauli,
     identitylike,
     inttosymbol,
     symboltoint,
     inttostring,
+    ispauli,
     getpauli,
     setpauli,
     show,
@@ -38,6 +41,10 @@ export
     commutator,
     getinttype
 
+include("PauliTransferMatrix/PauliTransferMatrix.jl")
+export
+    calculateptm,
+    totransfermap
 
 include("Gates/Gates.jl")
 export
@@ -48,8 +55,10 @@ export
     MaskedPauliRotation,
     CliffordGate,
     clifford_map,
+    transposecliffordmap,
     reset_clifford_map!,
     createcliffordmap,
+    composecliffordmaps,
     ParametrizedNoiseChannel,
     PauliNoise,
     DepolarizingNoise,
@@ -60,7 +69,9 @@ export
     AmplitudeDampingNoise,
     FrozenGate,
     freeze,
-    TGate
+    TGate,
+    TransferMapGate,
+    tomatrix
 
 include("Circuits/Circuits.jl")
 export

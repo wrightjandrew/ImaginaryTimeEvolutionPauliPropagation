@@ -21,6 +21,9 @@ function applytoall!(gate::PauliRotation, theta, psum, aux_psum; kwargs...)
     # this allows for faster operations
     gate = _tomaskedpaulirotation(gate, paulitype(psum))
 
+    # pre-compute the sine and cosine values because the are used for every Pauli string that does not commute with the gate
+    cos_val = cos(theta)
+    sin_val = sin(theta)
     # loop over all Pauli strings and their coefficients in the Pauli sum
     for (pstr, coeff) in psum
 
@@ -30,7 +33,9 @@ function applytoall!(gate::PauliRotation, theta, psum, aux_psum; kwargs...)
         end
 
         # else we know the gate will split th Pauli string into two
-        pstr, coeff1, new_pstr, coeff2 = splitapply(gate, pstr, coeff, theta; kwargs...)
+        coeff1 = coeff * cos_val
+        new_pstr, sign = getnewpaulistring(gate, pstr)
+        coeff2 = coeff * sin_val * sign
 
         # set the coefficient of the original Pauli string
         set!(psum, pstr, coeff1)
@@ -41,22 +46,6 @@ function applytoall!(gate::PauliRotation, theta, psum, aux_psum; kwargs...)
     end
 
     return
-end
-
-"""
-    splitapply(gate::MaskedPauliRotation, pstr::PauliStringType, coeff, theta; kwargs...)
-
-Apply a `MaskedPauliRotation` with an angle `theta` and a coefficient `coeff` to an integer Pauli string,
-assuming that the gate does not commute with the Pauli string.
-Returns two pairs of (pstr, coeff) as one tuple.
-Currently `kwargs` are passed to `applycos` and `applysin` for the Surrogate.
-"""
-function splitapply(gate::MaskedPauliRotation, pstr::PauliStringType, coeff, theta; kwargs...)
-    coeff1 = coeff * cos(theta)
-    new_pstr, sign = getnewpaulistring(gate, pstr)
-    coeff2 = coeff * sin(theta) * sign
-
-    return pstr, coeff1, new_pstr, coeff2
 end
 
 """
@@ -92,48 +81,28 @@ end
 """
     apply(gate::CliffordGate, pstr::PauliStringType, coeff)
 
-Apply a `CliffordGate` to an integer Pauli string and an optional coefficient. 
+Apply a `CliffordGate` to an integer Pauli string and its coefficient. 
 """
 function apply(gate::CliffordGate, pstr::PauliStringType, coeff; kwargs...)
+    # this array carries the new Paulis + sign for every occuring old Pauli combination
     map_array = clifford_map[gate.symbol]
-    return applywithmap(gate, pstr, coeff, map_array)
-end
 
-"""
-    applywithmap(gate::CliffordGate, pstr::PauliStringType, coefficient, map_array)
-
-Apply a `CliffordGate` to an integer Pauli string and a coefficient 
-using the a `map_array` corresponding to the `CliffordGate`.
-"""
-function applywithmap(gate::CliffordGate, pstr::PauliStringType, coeff, map_array; kwargs...)
     qinds = gate.qinds
 
-    lookup_int = _extractlookupop(pstr, qinds)
-    sign, partial_pstr = map_array[lookup_int+1]  # +1 because Julia is 1-indexed and lookup_int is 0-indexed
-    pstr = _insertnewpaulis!(pstr, partial_pstr, qinds)
+    # this integer carries the active Paulis on its bits
+    lookup_int = getpauli(pstr, qinds)
 
-    coeff = _multiplysign(coeff, sign)
+    # this integer can be used to index into the array returning the new Paulis
+    # +1 because Julia is 1-indexed and lookup_int is 0-indexed
+    partial_pstr, sign = map_array[lookup_int+1]
+
+    # insert the bits of the new Pauli into the old Pauli
+    pstr = setpauli(pstr, partial_pstr, qinds)
+
+    coeff *= sign
+
+    # usually return format would be ((pstr, coeff), ), but we also overload applyandadd!() to accept this
     return pstr, coeff
-end
-
-function _extractlookupop(lookup_int::PauliStringType, qinds)
-    partial_pstr = identitylike(lookup_int)
-    for ii in eachindex(qinds)
-        partial_pstr = setpauli(partial_pstr, getpauli(lookup_int, qinds[ii]), ii)
-    end
-    return partial_pstr
-end
-
-function _insertnewpaulis!(pstr::PauliStringType, partial_pstr::PauliStringType, qinds)
-    for ii in eachindex(qinds)
-        pstr = setpauli(pstr, getpauli(partial_pstr, ii), qinds[ii])
-    end
-    return pstr
-end
-
-# This is left general because it is overloaded in the Surrogate
-function _multiplysign(coefficient, sign)
-    return coefficient * sign
 end
 
 ### Pauli Noise
@@ -144,41 +113,28 @@ Overload of `applytoall!` for `PauliNoise` gates with noise strength `p`.
 It changes the coefficients in-place and does not require the `aux_psum`, which stays empty.
 """
 function applytoall!(gate::PauliNoise, p, psum, aux_psum; kwargs...)
+    # check that the noise strength is in the correct range
+    _check_noise_strength(PauliNoise, p)
 
     # loop over all Pauli strings and their coefficients in the Pauli sum
     for (pstr, coeff) in psum
-        if getpauli(pstr, gate.qind) == 0
-            # Pauli is I, so the gate does not do anything
+
+        # the Pauli on the site that the noise acts on
+        pauli = getpauli(pstr, gate.qind)
+
+        # `isdamped` is defined in noisechannels.jl for each Pauli noise channel
+        # I Paulis are never damped, but the others vary
+        if !isdamped(gate, pauli)
             continue
         end
 
-        # apply the Pauli noise, which will reduce the coefficient
-        pstr, new_coeff = apply(gate, pstr, coeff, p; kwargs...)
-
-        # set the coefficient of the Pauli string in the psum to the new coefficient
+        new_coeff = coeff * (1 - p)
+        # change the coefficient in psum, don't move anything to aux_psum
         set!(psum, pstr, new_coeff)
     end
 
     return
 end
-
-
-"""
-    apply(gate::PauliNoise, pstr::PauliStringType, coeff, p)
-
-Apply a `PauliNoise` channel to an integer Pauli string `pstr` with noise strength `p`.
-Physically `p` is restricted to the range `[0, 1]` and updates the coefficient `coeff` via `coeff*(1-p)` if damped.
-"""
-function apply(gate::PauliNoise, pstr::PauliStringType, coeff, p; kwargs...)
-    pauli = getpauli(pstr, gate.qind)
-
-    if isdamped(gate, pauli) # this function is defined in the noisechannels.jl file for each Pauli noise channel
-        coeff *= (1 - p)
-    end
-
-    return pstr, coeff
-end
-
 
 ### Amplitude Damping Noise
 """
@@ -188,7 +144,9 @@ Overload of `applytoall!` for `AmplitudeDampingNoise` gates.
 It fixes the type-instability of the apply() function and reduces moving Pauli strings between psum and aux_psum.
 `psum` and `aux_psum` are merged later.
 """
-function applytoall!(gate::AmplitudeDampingNoise, theta, psum, aux_psum; kwargs...)
+function applytoall!(gate::AmplitudeDampingNoise, gamma, psum, aux_psum; kwargs...)
+    # check that the noise strength is in the correct range
+    _check_noise_strength(AmplitudeDampingNoise, gamma)
 
     # loop over all Pauli strings and their coefficients in the Pauli sum
     for (pstr, coeff) in psum
@@ -196,16 +154,20 @@ function applytoall!(gate::AmplitudeDampingNoise, theta, psum, aux_psum; kwargs.
         if pauli == 0
             # Pauli is I, so the gate does not do anything
             continue
+
         elseif pauli == 1 || pauli == 2
             # Pauli is X or Y, so the gate will give a sqrt(1-gamma) prefactor
-            pstr, new_coeff = diagonalapply(gate, pstr, coeff, theta; kwargs...)
+            new_coeff = sqrt(1 - gamma)
             # set the coefficient of the Pauli string in the psum to the new coefficient
             set!(psum, pstr, new_coeff)
+
         else
             # Pauli is Z, so the gate will split the Pauli string 
 
             # else we know the gate will split th Pauli string into two
-            pstr, coeff1, new_pstr, coeff2 = splitapply(gate, pstr, coeff, theta; kwargs...)
+            new_pstr = setpauli(pstr, 0, gate.qind)
+            coeff1 = (1 - gamma) * coeff
+            coeff2 = gamma * coeff
 
             # set the coefficient of the original Pauli string
             set!(psum, pstr, coeff1)
@@ -219,50 +181,6 @@ function applytoall!(gate::AmplitudeDampingNoise, theta, psum, aux_psum; kwargs.
     return
 end
 
-"""
-    actsdiagonally(gate::AmplitudeDampingNoise, pstr::PauliStringType)
-
-Check if the amplitude damping noise channel acts diagonally on the Pauli string `pstr`.
-This implies no splitting (acting diagonally) which happens when acting on I, X, and Y.
-"""
-function actsdiagonally(gate::AmplitudeDampingNoise, pstr::PauliStringType; kwargs...)
-    return getpauli(pstr, gate.qind) != 3
-end
-
-"""
-    diagonalapply(gate::AmplitudeDampingNoise, pstr::PauliStringType, coeff, gamma)
-
-Apply an amplitude damping noise channel to an integer Pauli string `pstr` with noise strength `gamma`.
-This is under the assumption that it has been checked that the noise channel acts diagonally on the Pauli string.
-Returns a tuple of Pauli string and coefficient.
-Physically `gamma` is restricted to the range `[0, 1]`.
-A coefficient of the Pauli string can optionally be passed as `coefficient`.
-"""
-function diagonalapply(gate::AmplitudeDampingNoise, pstr::PauliStringType, coeff, gamma; kwargs...)
-
-    local_pauli = getpauli(pstr, gate.qind)
-
-    if local_pauli != 0  # non-identity Pauli
-        coeff *= sqrt(1 - gamma)
-    end
-
-    return pstr, coeff
-end
-
-"""
-    splitapply(gate::AmplitudeDampingNoise, pstr::PauliStringType, coeff, gamma)
-
-Apply an amplitude damping noise channel to an integer Pauli string `pstr` with noise strength `gamma`.
-This is under the assumption that it has been checked that the noise channel acts on a Z Pauli and splits.
-Returns a tuple of two pairs of Pauli strings and coefficients.
-Physically `gamma` is restricted to the range `[0, 1]`.
-A coefficient of the Pauli string can optionally be passed as `coefficient`.
-"""
-function splitapply(gate::AmplitudeDampingNoise, pstr::PauliStringType, coeff, gamma; kwargs...)
-    new_pstr = setpauli(pstr, 0, gate.qind)
-    return pstr, (1 - gamma) * coeff, new_pstr, gamma * coeff
-end
-
 ## T Gate
 """
     applytoall!(gate::TGate, thetas, psum, aux_psum; kwargs...)
@@ -272,6 +190,21 @@ Redirects to a `PauliRotation(:Z, qind)` with angle π/4.
 """
 function applytoall!(gate::TGate, thetas, psum, aux_psum; kwargs...)
     return applytoall!(PauliRotation(:Z, gate.qind), π / 4, psum, aux_psum; kwargs...)
+end
+
+## TransferMapGate
+"""
+    apply(gate::TransferMapGate, pstr, coeff)
+
+Apply a `TransferMapGate` to an integer Pauli string and its coefficient.
+The outcomes are determined by the `transfer_map` of the gate.
+"""
+function PauliPropagation.apply(gate::TransferMapGate, pstr, coeff)
+    # the Paulis packed into the integer are used to index into the transfer map
+    pauli_int = getpauli(pstr, gate.qinds)
+    pstrs_and_factors = gate.transfer_map[pauli_int+1]
+    # the new pstrs are the new Paulis that need to be set and the coefficients need to be multiplied with the factors
+    return Tuple((setpauli(pstr, new_pstr, gate.qinds), coeff * factor) for (new_pstr, factor) in pstrs_and_factors)
 end
 
 ### Frozen Gates

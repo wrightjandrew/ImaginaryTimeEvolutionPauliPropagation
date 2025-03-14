@@ -54,6 +54,9 @@ Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, 
 """
 function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
 
+    # check that max_freq and max_sins are only used a PathProperties type tracking them
+    _checkfreqandsinfields(psum, max_freq, max_sins)
+
     # if circ is actually a single gate, promote it to a list [gate]
     # similarly the theta if it is a single number
     circ, thetas = _promotecircandthetas(circ, thetas)
@@ -75,6 +78,8 @@ function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e
     for gate in reverse(circ)
         psum, aux_psum, param_idx = applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, kwargs...)
     end
+    # TODO: potential bug: If there are Clifford gates in the circuit, merging may swap the psums.
+    #                      Thi smeans that the original psum is not the one that is returned, and that the original psum is empty.
     return psum
 end
 
@@ -120,6 +125,7 @@ After this functions, Pauli strings in remaining in `psum` and `output_psum` are
 This function can be overwritten for a custom gate if the lower-level functions `applyandadd!` and `apply` are not sufficient.
 In particular, this function can be used to manipulate both `psum` and `output_psum` at the same time to reduce memory movement.
 Note that manipulating `psum` on anything other than the current Pauli string will likely lead to errors.
+See the `4-custom-gates.ipynb` for examples of how to define custom gates.
 """
 function applytoall!(gate, theta, psum, output_psum; kwargs...)
 
@@ -142,15 +148,15 @@ end
 This function can be overwritten for a custom gate if the lower-level function `apply` is not sufficient. 
 This is likely the the case if `apply` is not type-stable because it does not return a unique number of outputs. 
 E.g., a Pauli gate returns 1 or 2 (pstr, coefficient) outputs.
+See the `4-custom-gates.ipynb` for examples of how to define custom gates.
 """
 @inline function applyandadd!(gate, pstr, coeff, theta, output_psum; kwargs...)
 
-    # Get the (potentially new) pauli strings and their coefficients like (pstr1, coeff1, pstr2, coeff2, ...)
+    # Get the (potentially new) pauli strings and their coefficients in the form of ((pstr1, coeff1), (pstr2, coeff2), ...)
     pstrs_and_coeffs = apply(gate, pstr, coeff, theta; kwargs...)
 
-    for ii in 1:2:length(pstrs_and_coeffs)
+    for (new_pstr, new_coeff) in pstrs_and_coeffs
         # Itererate over the pairs of pstr and coeff
-        new_pstr, new_coeff = pstrs_and_coeffs[ii], pstrs_and_coeffs[ii+1]
         # Store the new_pstr and coeff in the aux_psum, add to existing coeff if new_pstr already exists there
         add!(output_psum, new_pstr, new_coeff)
     end
@@ -164,6 +170,7 @@ end
 
 Calling apply on a `StaticGate` will dispatch to a 3-argument apply function without the paramter `theta`.
 If a 4-argument apply function is defined for a concrete type, it will still dispatch to that one.
+See the `4-custom-gates.ipynb` for examples of how to define custom gates.
 """
 apply(gate::SG, pstr, coeff, theta; kwargs...) where {SG<:StaticGate} = apply(gate, pstr, coeff; kwargs...)
 
@@ -268,6 +275,33 @@ end
 
 
 ## Further utilities here
+
+# check that max_freq and max_sins are only used a PathProperties type tracking them
+function _checkfreqandsinfields(psum, max_freq, max_sins)
+
+    CT = coefftype(psum)
+
+    if !(CT <: PathProperties) && (max_freq != Inf || max_sins != Inf)
+        throw(ArgumentError(
+            "The `max_freq` and `max_sins` truncations can only be used with coefficients wrapped in `PathProperties` types.\n" *
+            "Consider using `wrapcoefficients() with the `PauliFreqTracker` type.")
+        )
+    end
+
+    if max_freq != Inf && !hasfield(CT, :freq)
+        throw(ArgumentError(
+            "The `max_freq` truncation is used, but the PathProperties type $CT does not have a `freq` field.")
+        )
+    end
+
+    if max_sins != Inf && !hasfield(CT, :nsins)
+        throw(ArgumentError(
+            "The `max_sins` truncation is used, but the PathProperties type $CT does not have a `nsins` field.")
+        )
+    end
+
+    return
+end
 
 function _promotecircandthetas(circ, thetas)
     # if users pass a gate, we assume that thetas also requires a `[]` around it

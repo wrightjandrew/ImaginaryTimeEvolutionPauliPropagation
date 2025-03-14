@@ -24,8 +24,8 @@ end
     end
 
     # Test the bounds error for converting integers outside [0, 3]
-    @test_throws BoundsError inttosymbol(4)
-    @test_throws BoundsError inttosymbol(-1)
+    @test_throws ArgumentError inttosymbol(4)
+    @test_throws ArgumentError inttosymbol(-1)
 
     # Test multiqubit conversion. Note that the order of the symbols is reversed
     # compared to the bitstring to int conversion.

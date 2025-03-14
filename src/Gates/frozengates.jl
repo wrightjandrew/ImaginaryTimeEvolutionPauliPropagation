@@ -18,9 +18,9 @@ struct FrozenGate{GateType<:ParametrizedGate,T<:Number} <: StaticGate
     parameter::T
 end
 
-import Base.show
-function show(io::IO, frozen_gate::FrozenGate)
-    print(io, "FrozenGate($(frozen_gate.gate), θ = $(round(frozen_gate.parameter, sigdigits=3)))")
+
+function Base.show(io::IO, frozen_gate::FrozenGate)
+    print(io, "FrozenGate($(frozen_gate.gate), parameter = $(round(frozen_gate.parameter, sigdigits=3)))")
 end
 
 """

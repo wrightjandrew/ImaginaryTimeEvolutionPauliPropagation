@@ -14,7 +14,15 @@ using Test
 
     m = countparameters(circ)
 
-    thetas = randn(m) .* 0.2
+    paulixnoise_index = getparameterindices(circ, PauliXNoise)
+    depolarizingnoise_index = getparameterindices(circ, DepolarizingNoise)
+    amplitudedampingnoise_index = getparameterindices(circ, AmplitudeDampingNoise)
+
+    thetas = randn(m)
+    thetas[paulixnoise_index] .= 0.12
+    thetas[depolarizingnoise_index] .= 0.23
+    thetas[amplitudedampingnoise_index] .= 0.02
+
 
     frozen_circ = freeze(circ, thetas)
 

@@ -20,6 +20,11 @@ function tfitrottercircuit(nqubits::Integer, nlayers::Integer; topology=nothing,
         topology = bricklayertopology(nqubits)
     end
 
+    # the function after this expects a circuit with at least one layer and will always append something
+    if nlayers == 0
+        return circuit
+    end
+
     if start_with_ZZ
         rzzlayer!(circuit, topology)
     end
