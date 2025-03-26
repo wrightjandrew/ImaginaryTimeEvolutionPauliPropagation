@@ -1,7 +1,9 @@
 # PauliPropagation.jl
 `PauliPropagation.jl` is a Julia package for Pauli propagation simulation of quantum circuits and quantum systems.
 
-The package estimates expectation values of observables expressed in the Pauli basis under evolution of noiseless and noisy quantum circuits. For example,  $`Tr[\rho \mathcal{D}(\hat{O})]`$ where $`\hat{O}`$ is an observable that is preferably sparse in Pauli basis, $`\mathcal{D}`$ is a quantum circuit, and $`\rho`$ a quantum state. For the case of unitary quantum circuits $`U`$, this is commonly written as $`Tr[\rho U^\dagger \hat{O} U]`$.
+The package simulates the evolution of objects expressed in the Pauli basis under noiseless and noisy quantum circuits. Commonly, this is used for the Heisenberg picture evolution of an observable. For example, if $`\hat{O}`$ is an observable that is preferably sparse in Pauli basis and $`\mathcal{E}`$ is a quantum circuit, we simulate $`\mathcal{E}^\dagger(\hat{O})`$ instead of most quantum simulation packages simulating the Schrödinger evolution  $`\mathcal{E}(\rho)`$ of states $`\rho`$. For the case of unitary quantum circuits $`U`$, the evolved observable $`\mathcal{E}^\dagger(\hat{O})`$ is usually written like $`U^\dagger \hat{O} U`$.
+
+Some opt-in truncations or approximations are particularly suited for estimating expectation values $`Tr[\rho \mathcal{E}^\dagger(\hat{O})]`$ of evolved observables with quantum states. 
 
 
 ## Installation
