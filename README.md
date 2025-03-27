@@ -6,14 +6,18 @@ The package estimates expectation values of observables expressed in the Pauli b
 
 ## Installation
 
-The `PauliPropagation.jl` package is not yet registered. But you can install it in at least the following two ways:
+The `PauliPropagation.jl` package is registered and can be installed into your environment in the following way:
+```julia
+using Pkg
+Pkg.add("PauliPropagation")
+```
 
 ### Install from GitHub
-You can install the package using `Pkg` from the following link: `https://github.com/MSRudolph/PauliPropagation.jl.git`.\
+If you want to install the latest code, you can install the package directly from the Github link.
 For example, if you are working with a Jupyter notebook, run
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/MSRudolph/PauliPropagation.jl.git")
+Pkg.add(url="https://github.com/MSRudolph/PauliPropagation.jl.git", rev="branchname")
 ```
 where you can use the keyword `rev="branchname"` to install development versions of the package.
 We don't recommend using branches other than `main` or `dev`.
