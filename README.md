@@ -1,7 +1,9 @@
 # PauliPropagation.jl
 `PauliPropagation.jl` is a Julia package for Pauli propagation simulation of quantum circuits and quantum systems.
 
-The package estimates expectation values of observables expressed in the Pauli basis under evolution of noiseless and noisy quantum circuits. For example,  $`Tr[\rho \mathcal{D}(\hat{O})]`$ where $`\hat{O}`$ is an observable that is preferably sparse in Pauli basis, $`\mathcal{D}`$ is a quantum circuit, and $`\rho`$ a quantum state. For the case of unitary quantum circuits $`U`$, this is commonly written as $`Tr[\rho U^\dagger \hat{O} U]`$.
+The package simulates the evolution of objects expressed in the Pauli basis under noiseless and noisy quantum circuits. Commonly, this is used for the Heisenberg picture evolution of an observable. For example, if $`\hat{O}`$ is an observable that is preferably sparse in Pauli basis and $`\mathcal{E}`$ is a quantum circuit, we simulate $`\mathcal{E}^\dagger(\hat{O})`$ instead of most quantum simulation packages simulating the Schrödinger evolution  $`\mathcal{E}(\rho)`$ of states $`\rho`$. For the case of unitary quantum circuits $`U`$, the evolved observable $`\mathcal{E}^\dagger(\hat{O})`$ is usually written like $`U^\dagger \hat{O} U`$.
+
+Some opt-in truncations or approximations are particularly suited for estimating expectation values $`Tr[\rho \mathcal{E}^\dagger(\hat{O})]`$ of evolved observables with quantum states. 
 
 
 ## Installation
@@ -33,6 +35,7 @@ Alternatively, you can push the relative path to the cloned repository to the Ju
 rel_path = "your/relative/path/PauliPropagation"
 push!(LOAD_PATH,rel_path);
 ```
+This may require that you have no global installation of `PauliPropagation` in your enviroment.
 
 ## Examples
 
@@ -84,8 +87,8 @@ overlapwithzero(pauli_sum)
 ## Important Notes and Caveats
 All of the following points can be addressed by you writing the necessary missing code due to the nice extensibility of Julia.
 - The package is tested for Julia `1.10` and `1.11`.
-- The default is the Heisenberg _backpropagation_. Schrödinger propagation may soon be natively supported but there are options to transpose `PauliRotation` gates by multiplying their angles with `-1` and `CliffordGate`s by using `transposecliffordmap()`.
-- We currently do not support the strong simulation of quantum states in non-exponential time (even for Stabilizer states).
+- The default is the Heisenberg _backpropagation_. Schrödinger propagation may soon be natively supported. At this moment, there are options to transpose `PauliRotation` gates by multiplying their angles with `-1` and `CliffordGate`s by using `transposecliffordmap()`.
+- We currently do not support the strong simulation of quantum states in non-exponential time (even for Stabilizer states). Pauli propagation could in principle be used as a backend for extended stabilizer simulation.
 - Sampling quantum states is currently not supported.
 - Many underlying data structures and functions can be used for other purposes involving Pauli operators.
 
@@ -97,7 +100,7 @@ Here are some features that we want to implement in the future. Feel free to con
 - **A fast and flexible Surrogate version**. Currently, we provide a version of the Pauli propagation Surrogate that is _good_ and _works_, at least for Pauli gates and Clifford gates. Stay tuned for a whole lot more.
 
 ## How to contribute
-We have a Slack channel `#pauli-propagation` in the [Julia Slack](https://join.slack.com/t/julialang/shared_invite/zt-2tyfzahid-QwVkpO13UA~9hyffV7UYMg).
+We have a Slack channel `#pauli-propagation` in the [Julia Slack](https://join.slack.com/t/julialang/shared_invite/zt-2zljxdwnl-kSXbwuwFHeERyxSD3iFJdQ).
 
 If something bothers you or you want to propose an enhancement, please open an [Issue](https://github.com/MSRudolph/PauliPropagation.jl/issues) describing everything in detail.
 
