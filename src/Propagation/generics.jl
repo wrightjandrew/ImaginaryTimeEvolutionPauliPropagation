@@ -110,7 +110,7 @@ function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight
     if normalization
         # Normalize the Pauli sum by dividing by the identity term.
         if getcoeff(psum, :I, 1) != 0
-            psum = mult!(psum, 1/((2^nq)*getcoeff(psum, :I, 1)))
+            psum = mult!(psum, 1/(getcoeff(psum, :I, 1)))
         else
             println("Normalization failed: Identity term is zero.")
         end
