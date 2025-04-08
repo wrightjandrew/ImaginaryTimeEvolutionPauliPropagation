@@ -41,13 +41,13 @@ export
     commutator,
     getinttype
 
-include("PauliTransferMatrix/PauliTransferMatrix.jl")
+include("./PauliTransferMatrix/PauliTransferMatrix.jl")
 export
     getpaulibasis,
     calculateptm,
     totransfermap
 
-include("Gates/Gates.jl")
+include("./Gates/Gates.jl")
 export
     Gate,
     ParametrizedGate,
@@ -74,7 +74,7 @@ export
     TransferMapGate,
     tomatrix
 
-include("Circuits/Circuits.jl")
+include("./Circuits/Circuits.jl")
 export
     countparameters,
     getparameterindices,
@@ -98,7 +98,7 @@ export
     ryylayer!,
     rzzlayer!
 
-include("PathProperties/PathProperties.jl")
+include("./PathProperties/PathProperties.jl")
 export
     PathProperties,
     PauliFreqTracker,
@@ -112,7 +112,7 @@ export
     truncatesins,
     truncatedampingcoeff
 
-include("Propagation/Propagation.jl")
+include("./Propagation/Propagation.jl")
 export
     propagate,
     propagate!,
