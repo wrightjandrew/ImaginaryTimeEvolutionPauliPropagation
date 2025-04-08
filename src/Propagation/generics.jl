@@ -33,8 +33,8 @@ Default truncations are `max_weight`, `min_abs_coeff`, `max_freq`, and `max_sins
 A custom truncation function can be passed as `customtruncfunc` with the signature customtruncfunc(pstr::PauliStringType, coefficient)::Bool.
 Further `kwargs` are passed to the lower-level functions `applymergetruncate!`, `applytoall!`, `applyandadd!`, and `apply`.
 """
-function propagate(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing, kwargs...)
-    psum = propagate!(circ, deepcopy(psum), thetas; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, kwargs...)
+function propagate(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e-10, max_freq=Inf, max_sins=Inf, customtruncfunc=nothing,  normalization=false, kwargs...)
+    psum = propagate!(circ, deepcopy(psum), thetas; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc, normalization = normalization, kwargs...)
     return psum
 end
 
@@ -57,8 +57,6 @@ function propagate!(circ, psum, thetas=nothing; max_weight=Inf, min_abs_coeff=1e
     # if circ is actually a single gate, promote it to a list [gate]
     # similarly the theta if it is a single number
     circ, thetas = _promotecircandthetas(circ, thetas)
-    println("here")
-
     # if thetas is nothing, the circuit must contain only StaticGates
     # also check if the length of thetas equals the number of parametrized gates
     _checkcircandthetas(circ, thetas)
@@ -100,19 +98,23 @@ function applymergetruncate!(gate, psum, aux_psum, thetas, param_idx; max_weight
     else
         theta = nothing
     end
-
     # Apply the gate to all Pauli strings in psum, potentially writing into auxillary aux_psum in the process.
     # The pauli sums will be changed in-place
     applytoall!(gate, theta, psum, aux_psum; kwargs...)
-
+    
     # Any contents of psum and aux_psum are merged into the larger of the two, which is returned as psum.
     # The other is emptied and returned as aux_psum.
     psum, aux_psum = mergeandempty!(psum, aux_psum)
 
+    nq = psum.nqubits    
     if normalization
-        psum = mult!(psum, 1/((2^nq)*getcoeff(psum, :I, 1)))
+        # Normalize the Pauli sum by dividing by the identity term.
+        if getcoeff(psum, :I, 1) != 0
+            psum = mult!(psum, 1/((2^nq)*getcoeff(psum, :I, 1)))
+        else
+            println("Normalization failed: Identity term is zero.")
+        end
     end
-
     # Check truncation conditions on all Pauli strings in psum and remove them if they are truncated.
     checktruncationonall!(psum; max_weight, min_abs_coeff, max_freq, max_sins, customtruncfunc)
 
@@ -258,7 +260,9 @@ A custom truncation function can be passed as `customtruncfunc` with the signatu
     kwargs...
 )
     is_truncated = false
-    if truncateweight(pstr, max_weight)
+    if(pstr == 0)
+        is_truncated = false
+    elseif truncateweight(pstr, max_weight)
         is_truncated = true
     elseif truncatemincoeff(coeff, min_abs_coeff)
         is_truncated = true
