@@ -43,7 +43,6 @@ export
 
 include("./PauliTransferMatrix/PauliTransferMatrix.jl")
 export
-    getpaulibasis,
     calculateptm,
     totransfermap
 
@@ -64,10 +63,10 @@ export
     PauliNoise,
     DepolarizingNoise,
     DephasingNoise,
+    AmplitudeDampingNoise,
     PauliXNoise,
     PauliYNoise,
     PauliZNoise,
-    AmplitudeDampingNoise,
     FrozenGate,
     freeze,
     TGate,
