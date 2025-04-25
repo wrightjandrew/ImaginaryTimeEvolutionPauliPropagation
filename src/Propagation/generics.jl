@@ -143,6 +143,45 @@ function applytoall!(gate, theta, psum, output_psum; kwargs...)
     empty!(psum)
 
     return
+    
+end
+
+function applytoall!(gate::PauliRotation, theta::ComplexF64, psum, aux_psum; kwargs...)
+    # NOTE: This is for imaginary time evolution!
+    if real(theta) > 0.0
+        throw(ArgumentError("Parameter `theta` needs to be fully imaginary. Got theta=$theta"))
+    end
+
+    println("Applying PauliRotation with theta=$theta")
+    # turn the PauliRotation gate into a MaskedPauliRotation gate
+    # this allows for faster operations
+    gate = PauliPropagation._tomaskedpaulirotation(gate, paulitype(psum))
+
+    # pre-compute the sinh and cosh values because they are used for every Pauli string that does not commute with the gate
+    cosh_val = cos(theta)
+    sinh_val = sin(theta)
+    # loop over all Pauli strings and their coefficients in the Pauli sum
+    for (pstr, coeff) in psum
+
+        if !commutes(gate, pstr)
+            # if the gate does not commute with the pauli string, do nothing
+            continue
+        end
+
+        # else we know the gate will split the Pauli string into two
+        coeff1 = real(coeff * cosh_val)
+        new_pstr, sign = getnewimaginarypaulistring(gate, pstr)
+        coeff2 = real(coeff * sinh_val * sign)
+
+        # set the coefficient of the original Pauli string
+        set!(psum, pstr, coeff1)
+
+        # set the coefficient of the new Pauli string in the aux_psum
+        # we can set the coefficient because PauliRotations create non-overlapping new Pauli strings
+        set!(aux_psum, new_pstr, coeff2)
+    end
+
+    return
 end
 
 """
